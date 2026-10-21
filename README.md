@@ -36,6 +36,19 @@ npm install totalfusion
 
 Add it to your Total.js 5 project. It requires Node.js 20+ and Python 3.9+ already installed. TotalFusion never installs anything on your system. The worker uses only the Python standard library.
 
+## Compatibility
+
+What the test suite (104 tests) has been run against:
+
+| | Verified |
+|---|---|
+| Node.js | 20, 22, 24 |
+| Python | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.15 |
+| Total.js | `total5` 0.0.19-8 from npm and the 0.0.20 development version |
+| Operating system | macOS on Apple silicon |
+
+Linux and Windows are not verified yet. The GitHub Actions workflow in [.github/workflows/test.yml](.github/workflows/test.yml) runs the suite on Linux, macOS and Windows with those Node.js and Python versions, but it has not run yet. On Windows the memory of a worker is not reported, so `maxMemory` has no effect there.
+
 ## Usage
 
 ```js
