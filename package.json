@@ -1,10 +1,36 @@
 {
 	"name": "totalfusion",
-	"version": "0.0.1",
-	"description": "Typed, supervised workers for Node.js. Call Python (and more) as async functions.",
-	"main": "index.js",
-	"private": true,
+	"version": "0.1.0",
+	"description": "Extends Total.js with Python and Rust: supervised workers, contracts that become actions and MCP tools, streaming, binary data and development reload.",
+	"keywords": [
+		"totaljs",
+		"total.js",
+		"python",
+		"rust",
+		"worker",
+		"workers",
+		"ipc",
+		"mcp",
+		"ai",
+		"machine-learning",
+		"streaming",
+		"interop"
+	],
+	"homepage": "https://github.com/totaljs-es/totalfusion#readme",
+	"bugs": {
+		"url": "https://github.com/totaljs-es/totalfusion/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/totaljs-es/totalfusion.git"
+	},
+	"author": "Spanish Total.js Platform",
 	"license": "MIT",
+	"private": true,
+	"main": "index.js",
+	"bin": {
+		"totalfusion": "bin/totalfusion.js"
+	},
 	"engines": {
 		"node": ">=20"
 	},
@@ -17,12 +43,12 @@
 		"rust/index.js",
 		"rust/Cargo.toml",
 		"rust/README.md",
-		"rust/src"
+		"rust/src",
+		"CHANGELOG.md"
 	],
 	"scripts": {
-		"test": "node --test"
-	},
-	"bin": {
-		"totalfusion": "bin/totalfusion.js"
+		"test": "node --test",
+		"test:rust": "cargo test --manifest-path rust/Cargo.toml",
+		"prepublishOnly": "npm test"
 	}
 }

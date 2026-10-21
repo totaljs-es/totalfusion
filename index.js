@@ -2,6 +2,7 @@
 
 const { FusionError } = require('./lib/errors');
 const { FusionStream } = require('./lib/stream');
+const { watch } = require('./lib/watch');
 
 // Adapters are loaded only when their runtime is used
 const ADAPTERS = {
@@ -15,6 +16,7 @@ class Fusion {
 
 		this.config = {};
 		this.pools = new Map();
+		this.watchers = new Set();
 
 		// So they can be destructured: const { python } = require('totalfusion')
 		this.configure = this.configure.bind(this);
@@ -27,6 +29,7 @@ class Fusion {
 		this.warmup = this.warmup.bind(this);
 		this.doctor = this.doctor.bind(this);
 		this.register = this.register.bind(this);
+		this.watch = this.watch.bind(this);
 		this.stream = this.stream.bind(this);
 		this.sse = this.sse.bind(this);
 		this.stats = this.stats.bind(this);
@@ -122,6 +125,41 @@ class Fusion {
 		}
 	}
 
+	// Development: replaces the workers of a runtime when its code changes on disk (the .py files, or the Rust binary after
+	// `cargo build`), so you see your edit in the next call. No call is lost: the new workers start first. Returns { close() }.
+	//   fusion.watch('python');
+	// options: debounce (ms of quiet after the last change, default 200), log (default true), onreload({ runtime, files, replaced })
+	watch(runtime, options) {
+
+		if (!options)
+			options = {};
+
+		if (!ADAPTERS[runtime])
+			throw new FusionError('NOT_FOUND', 'Unknown runtime "' + runtime + '"');
+
+		const target = ADAPTERS[runtime]().watchTarget(this.config[runtime] || {});
+
+		const handle = watch(target, files => {
+
+			const pool = this.pools.get(runtime);
+			const replaced = pool ? pool.restart() : 0;
+
+			if (options.log !== false)
+				console.log('[totalfusion] ' + runtime + ': ' + files.join(', ') + ' changed, ' + (replaced ? 'replacing ' + replaced + (replaced === 1 ? ' worker' : ' workers') : 'the next call starts with the new code'));
+
+			if (options.onreload)
+				options.onreload({ runtime, files, replaced });
+
+		}, options);
+
+		this.watchers.add(handle);
+
+		return { close: () => {
+			handle.close();
+			this.watchers.delete(handle);
+		} };
+	}
+
 	// Checks the interpreter, the components and the libraries before anything runs. Nothing is imported or installed.
 	//   const report = await fusion.doctor('python');   report.ok, report.checks, report.text
 	doctor(runtime) {
@@ -159,6 +197,11 @@ class Fusion {
 	}
 
 	async shutdown() {
+		for (const handle of this.watchers)
+			handle.close();
+
+		this.watchers.clear();
+
 		const pools = Array.from(this.pools.values());
 		this.pools.clear();
 		await Promise.all(pools.map(pool => pool.shutdown()));

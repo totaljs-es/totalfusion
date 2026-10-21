@@ -38,7 +38,7 @@ Add it to your Total.js 5 project. It requires Node.js 20+ and Python 3.9+ alrea
 
 ## Compatibility
 
-What the test suite (104 tests) has been run against:
+What the test suite (more than 200 tests, 150 of them without Rust) has been run against:
 
 | | Verified |
 |---|---|
@@ -49,84 +49,6 @@ What the test suite (104 tests) has been run against:
 | Operating system | macOS on Apple silicon |
 
 Linux and Windows are not verified yet. The GitHub Actions workflow in [.github/workflows/test.yml](.github/workflows/test.yml) runs the suite on Linux, macOS and Windows with those Node.js and Python versions, but it has not run yet. On Windows the memory of a worker is not reported, so `maxMemory` has no effect there.
-
-## Rust
-
-Write the functions in Rust, build a binary, and call it like the Python ones. A Rust worker is an **isolated process** that speaks the same protocol, so everything in this README applies to it as well: the pool, timeouts, cancellation, [binary data](#binary-data), [streaming](#streaming), [recycling and health checks](#keeping-workers-healthy), Total.js actions, MCP tools and the `doctor`.
-
-```rust
-// rust/src/main.rs
-use totalfusion::{object, App, Call, Error};
-
-fn main() {
-    App::new()
-        .function("collatz.longest", |call: &Call| {
-            let limit = call.args["limit"].as_i64().ok_or_else(|| Error::invalid("limit must be a number"))?;
-            Ok(object! { "number" => limit })   // the real work goes here
-        })
-        .summary("Finds the number with the longest Collatz chain")
-        .input("*limit:Number")
-        .mcp(true)
-        .run();
-}
-```
-
-The crate is not on crates.io: the npm package ships its sources, so the `Cargo.toml` of your worker points to them:
-
-```toml
-[dependencies]
-totalfusion = { path = "../node_modules/totalfusion/rust" }
-```
-
-```bash
-cargo build --release
-```
-
-```js
-fusion.configure({ rust: { binary: './rust/target/release/worker', workers: 4 } });
-
-const result = await fusion.rust('collatz.longest', { limit: 3000000 });
-
-for await (const chunk of fusion.rust.stream('events.watch', { topic: 'x' })) { /* ... */ }
-
-// Total.js: the functions that declare their contract become actions
-await fusion.register({ runtime: 'rust', rust: { binary: './rust/target/release/worker' } });
-```
-
-The guide of the crate, with the whole API, is in [rust/README.md](rust/README.md). A complete example is in [examples/rust](examples/rust).
-
-- **Nothing is compiled for you.** `binary` is the path of a worker you built (or got precompiled), so the people who only run the application do not need Rust. `fusion.doctor('rust')` and `npx totalfusion doctor --binary ./worker` check that the file exists, can be executed, answers, speaks the same protocol version and is not a debug build.
-- **A panic fails one call, not the worker.** A crash of the process is a `WORKER_CRASHED` error and the worker is replaced; Node.js never goes down.
-- **Same options as Python:** `workers`, `concurrency`, `timeout`, `maxQueue`, `maxCalls`, `maxMemory`, `healthInterval`, `cancelGrace`... plus `args`, `env` and `cwd` for the process. Every call of a worker runs in its own thread, so `concurrency` makes one process use all the cores (see [Several calls at the same time](#several-calls-at-the-same-time)).
-- **Contracts are declared in code**, with the same names as `@action` in Python (`summary`, `input`, `output`, `query`, `params`, `permissions`, `mcp`...). The binary prints them with `--describe`.
-- **Where Rust pays off.** Heavy CPU work that should not block Node.js and that can use several cores. For the longest Collatz chain below 3 million (the same algorithm in each language, eight cores): optimized JavaScript takes 1.2 s and Rust 0.33 s (3.6x; the naive JavaScript most people write is 14x slower than Rust), and pure Python is 48x slower than Rust. Eight of those jobs take 9.1 s in JavaScript, **blocking the event loop the whole time**, and 0.7 s on four Rust workers, which leave the event loop free (1 ms of delay). A call that does nothing costs 0.03 ms. For light work on small data, JavaScript in the same process wins: it pays no transfer.
-- **Windows:** the standard output is not redirected, so use `eprintln!` and not `println!` in a worker. Not tested there yet.
-
-## Checking your setup
-
-Before running anything, ask TotalFusion what is wrong:
-
-```bash
-npx totalfusion doctor --path ./python --venv ./.venv
-```
-
-```
-TotalFusion doctor: python
-
-[ok]    Interpreter  Python 3.12.15 (/project/.venv/bin/python, chosen by the venv option)
-[ok]    Environment  Virtual environment /project/.venv
-[ok]    Components   3 modules in /project/python, 2 actions (1 streaming)
-[error] Libraries    Not installed: sklearn (pip: scikit-learn) used by classifier; torch used by sentiment
-                     Fix: /project/.venv/bin/python -m pip install scikit-learn torch
-
-1 problem to fix
-```
-
-The same from code: `const report = await fusion.doctor('python')` gives `report.ok`, `report.checks` (each with `status`, `name`, `message` and, when there is something to do, `fix`) and `report.text`. The command exits with `0` when everything is in order (warnings are advice), `1` when something has to be fixed and `2` for a wrong usage; `--json` prints the report as JSON. Options: `--path`, `--venv`, `--python`, `--requirements`, `--preload a,b`, `--max-memory 2gb`.
-
-It looks at the interpreter (version, where it was chosen from, virtual environment or system Python), the components (syntax errors, contracts that cannot be read, `preload` modules that do not exist), the libraries they import and `requirements.txt`. **Nothing is imported, run or installed**: the components are read as text, so a module that loads a model on import is no problem. Imports inside functions are found too, and an import guarded by `try/except ImportError` is only a warning. The libraries are looked up with the same interpreter that will run the workers, which is the point: installing a library in another Python is the most common mistake. For `requirements.txt` (next to the components, in the folder above, or the `requirements` option) it checks what is installed and the version specifiers (`==`, `>=`, `<`, ...); lines with environment markers, URLs and options such as `-r` are not checked.
-
-The same hint reaches the errors at run time. A call that fails with `ModuleNotFoundError`, or a worker that cannot start because of a missing library, carries `err.hint` (and it is appended to the stack): `"numpy" is not installed in the Python that runs the workers (/project/.venv/bin/python). Install it with: /project/.venv/bin/python -m pip install numpy`. Names that differ from the package (`sklearn` is `scikit-learn`, `cv2` is `opencv-python`, `PIL` is `Pillow`, ...) are translated.
 
 ## Usage
 
@@ -149,11 +71,40 @@ fusion.configure({
 await fusion.python('module.function', args, { timeout: 5000, signal });
 await fusion.call('python', 'module.function', args);   // generic form
 
-fusion.stats();                // { python: { workers, ready, busy, queued } }
-await fusion.shutdown();       // also done automatically when the process exits
+fusion.stats();                // what every pool is doing, see "Keeping workers healthy"
+await fusion.shutdown();       // stops the workers; they also end by themselves if the process exits
 ```
 
 `configure()` must run before the first call. The interpreter is chosen in this order: `python` option, `venv` option, `TOTALFUSION_PYTHON`, then `python3` (`python` on Windows).
+
+### Options
+
+The options of `fusion.configure({ python: {...} })` and `fusion.configure({ rust: {...} })`:
+
+| Option | Runtime | Default | |
+|---|---|---|---|
+| `workers` | both | `1` | Processes in the pool. They start on demand. |
+| `concurrency` | both | `1` | Calls a worker runs at the same time. |
+| `timeout` | both | `30000` | Milliseconds per call (in a stream, without progress). `0` disables it. |
+| `maxQueue` | both | `1000` | Calls waiting for a worker before `QUEUE_FULL`. |
+| `startTimeout` | both | `30000` | Milliseconds a worker has to become ready (raise it for big models). |
+| `cancelGrace` | both | `2000` | Milliseconds a worker has to cancel a call before it is killed. |
+| `maxCalls` | both | never | Replace a worker after this many calls. |
+| `maxMemory` | both | no limit | Replace a worker that uses more: bytes, `'512mb'`, `'1.5gb'`. |
+| `healthInterval` | both | `10000` | Ping idle workers every N ms. `0` disables it. |
+| `healthTimeout` | both | `10000` | Milliseconds a worker has to answer a ping. |
+| `forwardStderr` | both | `true` | Show what the workers write to their error output. |
+| `env` | both | `process.env` | The environment of the workers. |
+| `path` | Python | `./python` | The directory with your components. |
+| `python` | Python | | The interpreter command (wins over `venv`). |
+| `venv` | Python | | A virtual environment whose interpreter is used. |
+| `preload` | Python | none | Modules to import (running their `@startup`) before a worker is ready. |
+| `requirements` | Python | `requirements.txt` | The file that `doctor` checks. |
+| `binary` | Rust | | The path of the worker you built. |
+| `args` | Rust | none | Arguments for the worker. |
+| `cwd` | Rust | folder of the binary | Working directory of the worker. |
+
+The methods: `fusion.python(fn, args, options)` and `fusion.rust(...)` (or `fusion.call(runtime, fn, args, options)`), `fusion.stream(...)` and `fusion.python.stream(...)` / `fusion.rust.stream(...)`, `fusion.describe(runtime)`, `fusion.warmup(runtime)`, `fusion.watch(runtime)`, `fusion.doctor(runtime)`, `fusion.register(options)` and `fusion.sse($, stream)` for Total.js, `fusion.stats()` and `fusion.shutdown()`.
 
 ### Writing components
 
@@ -185,7 +136,7 @@ def classify(data):
     return { 'label': model.predict(data['text']) }
 ```
 
-`@action` declares the contract: `summary`, `input`, `output` (Total.js schema syntax), `mcp`, `permissions`, `timeout` and `name`/`id`. Its arguments are read **statically** (they must be literals), so `fusion.describe('python')` lists every contract without importing your code and without loading any model.
+`@action` declares the contract: `summary`, `input`, `output`, `query`, `params` (Total.js schema syntax), `mcp`, `permissions`, `user`, `sa`, `su`, `timeout` and `name`/`id`. Its arguments are read **statically** (they must be literals), so `fusion.describe('python')` lists every contract without importing your code and without loading any model.
 
 `@startup` and `@shutdown` can be `def` or `async def`. To load a model **before** the worker reports ready (so the first call is not slow), name the module in `preload`: `fusion.configure({ python: { preload: ['classifier'] } })`. A module that cannot be preloaded fails the start with the real traceback in `err.stderr`.
 
@@ -355,9 +306,9 @@ Memory is the resident size on Linux and the physical footprint on macOS (the va
 
 ```js
 fusion.stats().python
-// { workers: 1, ready: 1, busy: 0, queued: 0,
-//   recycled: { calls: 2, memory: 0 }, unresponsive: 0,
-//   details: [{ pid: 67025, ready: true, busy: false, calls: 32, memory: 1417674752, age: 6120, recycling: false }] }
+// { workers: 1, ready: 1, busy: 0, running: 0, queued: 0,
+//   recycled: { calls: 2, memory: 0, reload: 0 }, unresponsive: 0,
+//   details: [{ pid: 67025, ready: true, busy: false, running: 0, calls: 32, memory: 1417674752, age: 6120, recycling: false }] }
 ```
 
 ### Errors
@@ -366,7 +317,7 @@ Every error is a `FusionError` with a stable `code`.
 
 | Code | Meaning |
 |---|---|
-| `REMOTE_ERROR` | The Python function raised. `err.remote` has `name`, `message` and `traceback`, and the traceback is appended to `err.stack`. |
+| `REMOTE_ERROR` | The function in the worker raised (Python) or returned an error (Rust). `err.remote` has `name`, `message` and, in Python, `traceback`, which is also appended to `err.stack`. A function can give its error a `code` of its own. |
 | `TIMEOUT` / `ABORTED` | The call exceeded its timeout or its `AbortSignal` fired. |
 | `STREAMING_FUNCTION` | A generator was called with `fusion.python()`: use `fusion.stream()`. |
 | `CANCELLED` | The stream was cancelled by its consumer. |
@@ -374,16 +325,114 @@ Every error is a `FusionError` with a stable `code`.
 | `QUEUE_FULL` | The bounded queue is full: backpressure instead of unbounded memory growth. |
 | `NOT_FOUND` | Unknown module or function (or not exposed). |
 | `NOT_SERIALIZABLE` / `ENCODE_ERROR` | The result / the arguments are not valid JSON. |
-| `SPAWN_FAILED` / `START_FAILED` | The interpreter was not found or the worker cannot start. `err.hint` says how to install a missing library. |
+| `SPAWN_FAILED` / `START_FAILED` / `START_TIMEOUT` | The interpreter or the worker was not found, cannot start, or did not become ready in `startTimeout`. `err.hint` says how to install a missing library. |
+| `PROTOCOL_MISMATCH` | The worker speaks another version of the protocol (a Rust worker built with another version of the crate). |
+| `INVALID_CONFIG` / `ALREADY_STARTED` | An option is wrong, or `configure()` was called after the pool started. |
 | `CLOSED` | The pool was shut down while the call was pending. |
 
 ### Cancellation
 
 `async def` functions are cancelled for real (`asyncio` cancellation). Synchronous functions cannot be interrupted: after a timeout the caller is rejected immediately, and if the function does not finish within `cancelGrace` (2 s) the worker is killed and replaced.
 
+## Rust
+
+Write the functions in Rust, build a binary, and call it like the Python ones. A Rust worker is an **isolated process** that speaks the same protocol, so everything in this README applies to it as well: the pool, timeouts, cancellation, [binary data](#binary-data), [streaming](#streaming), [recycling and health checks](#keeping-workers-healthy), Total.js actions, MCP tools and the `doctor`.
+
+```rust
+// rust/src/main.rs
+use totalfusion::{object, App, Call, Error};
+
+fn main() {
+    App::new()
+        .function("collatz.longest", |call: &Call| {
+            let limit = call.args["limit"].as_i64().ok_or_else(|| Error::invalid("limit must be a number"))?;
+            Ok(object! { "number" => limit })   // the real work goes here
+        })
+        .summary("Finds the number with the longest Collatz chain")
+        .input("*limit:Number")
+        .mcp(true)
+        .run();
+}
+```
+
+The crate is not on crates.io: the npm package ships its sources, so the `Cargo.toml` of your worker points to them:
+
+```toml
+[dependencies]
+totalfusion = { path = "../node_modules/totalfusion/rust" }
+```
+
+```bash
+cargo build --release
+```
+
+```js
+fusion.configure({ rust: { binary: './rust/target/release/worker', workers: 4 } });
+
+const result = await fusion.rust('collatz.longest', { limit: 3000000 });
+
+for await (const chunk of fusion.rust.stream('count.up', { n: 10 })) { /* a function registered with .stream() */ }
+
+// Total.js: the functions that declare their contract become actions
+await fusion.register({ runtime: 'rust', rust: { binary: './rust/target/release/worker' } });
+```
+
+The guide of the crate, with the whole API, is in [rust/README.md](rust/README.md). A complete example is in [examples/rust](examples/rust).
+
+- **Nothing is compiled for you.** `binary` is the path of a worker you built (or got precompiled), so the people who only run the application do not need Rust. `fusion.doctor('rust')` and `npx totalfusion doctor --binary ./worker` check that the file exists, can be executed, answers, speaks the same protocol version and is not a debug build.
+- **A panic fails one call, not the worker.** A crash of the process is a `WORKER_CRASHED` error and the worker is replaced; Node.js never goes down.
+- **Same options as Python:** `workers`, `concurrency`, `timeout`, `maxQueue`, `maxCalls`, `maxMemory`, `healthInterval`, `cancelGrace`... plus `args`, `env` and `cwd` for the process. Every call of a worker runs in its own thread, so `concurrency` makes one process use all the cores (see [Several calls at the same time](#several-calls-at-the-same-time)).
+- **Contracts are declared in code**, with the same names as `@action` in Python (`summary`, `input`, `output`, `query`, `params`, `permissions`, `mcp`...). The binary prints them with `--describe`.
+- **Where Rust pays off.** Heavy CPU work that should not block Node.js and that can use several cores. For the longest Collatz chain below 3 million (the same algorithm in each language, eight cores): optimized JavaScript takes 1.2 s and Rust 0.33 s (3.6x; the naive JavaScript most people write is 14x slower than Rust), and pure Python is 48x slower than Rust. Eight of those jobs take 9.1 s in JavaScript, **blocking the event loop the whole time**, and 0.7 s on four Rust workers, which leave the event loop free (1 ms of delay). A call that does nothing costs 0.03 ms. For light work on small data, JavaScript in the same process wins: it pays no transfer.
+- **Windows:** the standard output is not redirected, so use `eprintln!` and not `println!` in a worker. Not tested there yet.
+
+## Development: reload when the code changes
+
+```js
+fusion.watch('python');   // replaces the workers when a .py file changes
+fusion.watch('rust');     // ... when the worker is built again (cargo build)
+
+// Total.js: the same, and the contracts are read again, so a new, changed or removed function is an action without restarting
+await fusion.register({ python: { path: PATH.root('python') }, watch: DEBUG });
+```
+
+Save a file and the next call runs the new code. The new workers start first and the old ones leave when they are idle, so **no call is lost** while you edit. Options of `fusion.watch(runtime, options)`: `debounce` (milliseconds of quiet after the last change, default 200), `log` (a line in the console for every reload, default true) and `onreload({ runtime, files, replaced })`. It returns `{ close() }`, and `fusion.shutdown()` closes every watcher.
+
+- **What counts.** Python: the `.py` files of the components (not hidden folders, `__pycache__` or `node_modules`). Rust: the binary. Many writes in a row are one reload.
+- **Changes are checked, not trusted.** The events of the system are only a hint (macOS repeats the recent ones, and an editor can save twice): the files are compared with how they were, so a save that changes nothing does not reload.
+- **A mistake does not take the application down.** A Python file with a syntax error makes the calls to that module fail with `SyntaxError` while the rest keeps working, and fixing it recovers. If a new worker cannot start (for example a `preload` module with an error) the old one keeps serving and a warning says so; the next edit tries again at once.
+- **In Total.js** an error in a file removes no action until it is fixed, and `onreload` of `register` receives the `errors`. A new module with `@startup` or a change in `preload` needs a restart of the application.
+- **Only for development.** Use `watch: DEBUG` (or `false` in production): it keeps a watcher on your code and replaces workers.
+
+## Checking your setup
+
+Before running anything, ask TotalFusion what is wrong:
+
+```bash
+npx totalfusion doctor --path ./python --venv ./.venv
+```
+
+```
+TotalFusion doctor: python
+
+[ok]    Interpreter  Python 3.12.15 (/project/.venv/bin/python, chosen by the venv option)
+[ok]    Environment  Virtual environment /project/.venv
+[ok]    Components   3 modules in /project/python, 2 actions (1 streaming)
+[error] Libraries    Not installed: sklearn (pip: scikit-learn) used by classifier; torch used by sentiment
+                     Fix: /project/.venv/bin/python -m pip install scikit-learn torch
+
+1 problem to fix
+```
+
+The same from code: `const report = await fusion.doctor('python')` gives `report.ok`, `report.checks` (each with `status`, `name`, `message` and, when there is something to do, `fix`) and `report.text`. The command exits with `0` when everything is in order (warnings are advice), `1` when something has to be fixed and `2` for a wrong usage; `--json` prints the report as JSON. Options: `--runtime python|rust`, `--path`, `--venv`, `--python`, `--requirements`, `--preload a,b`, `--binary` (Rust) and `--max-memory 2gb`.
+
+It looks at the interpreter (version, where it was chosen from, virtual environment or system Python), the components (syntax errors, contracts that cannot be read, `preload` modules that do not exist), the libraries they import and `requirements.txt`. **Nothing is imported, run or installed**: the components are read as text, so a module that loads a model on import is no problem. Imports inside functions are found too, and an import guarded by `try/except ImportError` is only a warning. The libraries are looked up with the same interpreter that will run the workers, which is the point: installing a library in another Python is the most common mistake. For `requirements.txt` (next to the components, in the folder above, or the `requirements` option) it checks what is installed and the version specifiers (`==`, `>=`, `<`, ...); lines with environment markers, URLs and options such as `-r` are not checked.
+
+The same hint reaches the errors at run time. A call that fails with `ModuleNotFoundError`, or a worker that cannot start because of a missing library, carries `err.hint` (and it is appended to the stack): `"numpy" is not installed in the Python that runs the workers (/project/.venv/bin/python). Install it with: /project/.venv/bin/python -m pip install numpy`. Names that differ from the package (`sklearn` is `scikit-learn`, `cv2` is `opencv-python`, `PIL` is `Pillow`, ...) are translated.
+
 ## How it works
 
-Each worker is a Python process that talks to Node.js over stdin/stdout with length-prefixed frames (protocol version 2: JSON for the structure plus raw binary parts, see [lib/protocol.js](lib/protocol.js)). Calls carry an id, so responses never mix under concurrency. Workers start on demand, are replaced when they crash, exit when the parent dies and do not keep your Node.js process alive while idle.
+Each worker is a process (Python, or a Rust binary) that talks to Node.js over stdin/stdout with length-prefixed frames (protocol version 2: JSON for the structure plus raw binary parts, see [lib/protocol.js](lib/protocol.js)). Calls carry an id, so responses never mix under concurrency. Workers start on demand, are replaced when they crash, exit when the parent dies and do not keep your Node.js process alive while idle.
 
 Measured on one machine (Python 3.15, Node 24, macOS arm64), warm workers, JSON payloads:
 
@@ -399,11 +448,11 @@ Measured on one machine (Python 3.15, Node 24, macOS arm64), warm workers, JSON 
 
 With a real library (NumPy in a virtual environment, nearest neighbours over 50,000 vectors of 128 dimensions, see [examples/components/vectors.py](examples/components/vectors.py)): the worker starts and builds the index once (about 145 ms with a warm disk cache), then every call takes about 3 ms (p50), against about 98 ms when a process is spawned per call.
 
-Throughput with 4 workers and trivial calls: about 23,000 calls/s. These numbers are a starting point, not a benchmark suite. Binary data does not go through JSON (see below).
+Throughput with 4 workers and trivial calls: about 23,000 calls/s. These numbers are a starting point, not a benchmark suite. Binary data does not go through JSON (see [Binary data](#binary-data)).
 
 ## Security
 
-Workers are ordinary child processes. They run your Python code with your user's permissions and inherit the environment (pass `env` to restrict it). **A worker is not a sandbox**: only run components you trust. Function names are restricted to your components directory, but that is a guard against mistakes, not a security boundary.
+Workers are ordinary child processes. They run your Python or Rust code with your user's permissions and inherit the environment (pass `env` to restrict it). **A worker is not a sandbox**: only run components you trust. In Python, function names are restricted to your components directory, but that is a guard against mistakes, not a security boundary. Rust is memory safe, which protects the worker from its own bugs, not the machine from the worker. Nothing is downloaded, compiled or installed for you, and an action is only visible to agents when its function says `mcp`.
 
 ## Tests
 
@@ -411,7 +460,7 @@ Workers are ordinary child processes. They run your Python code with your user's
 npm test
 ```
 
-The NumPy tests are skipped unless you point them to a Python that has NumPy: `TOTALFUSION_TEST_NUMPY=/path/to/python npm test`.
+The suite builds the Rust test worker with `cargo` if it finds it (otherwise the Rust tests are not run), and it needs Total.js 5 for the integration tests: it looks in `TOTAL5_PATH`, in the `total5` package and in a sibling `../framework5`. The NumPy tests are skipped unless you point them to a Python that has NumPy: `TOTALFUSION_TEST_NUMPY=/path/to/python npm test`. `TOTALFUSION_PYTHON` chooses the Python of the whole suite. The crate has its own tests: `cargo test --manifest-path rust/Cargo.toml`.
 
 ## License
 

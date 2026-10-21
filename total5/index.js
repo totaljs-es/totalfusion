@@ -66,6 +66,7 @@ exports.sse = function($, stream, options) {
 // options.python        configuration of the runtime (same as fusion.configure({ python: ... }))
 // options.runtime       runtime to register (default: 'python')
 // options.preload       false = do not add the modules with @startup to `preload` (default: true)
+// options.watch         true = development: replace the workers and read the contracts again when the code changes (default: false)
 // options.warmup        true = start the workers and wait until they are ready before resolving (default: false)
 // options.prefix        prepended to the id of every action, e.g. 'Python/'
 // options.fusion        TotalFusion instance (default: the shared one)
@@ -95,63 +96,112 @@ exports.register = async function(options) {
 		fusion.configure({ [runtime]: { preload: Array.from(new Set([].concat(current, found.startups))) } });
 	}
 
-	const ids = [];
-	const warnings = [];
+	// Creates (or replaces) the action of every function that declares a contract
+	function build(found) {
 
-	for (const item of found.actions) {
+		const ids = [];
+		const warnings = [];
 
-		const meta = item.meta;
-		const id = meta.id || (prefix + (item.module ? item.module.replace(/\./g, '/') + '/' : '') + item.name);
+		for (const item of found.actions) {
 
-		warnings.push(...lint(id, meta));
+			const meta = item.meta;
+			const id = meta.id || (prefix + (item.module ? item.module.replace(/\./g, '/') + '/' : '') + item.name);
 
-		// An action answers once. A generator is a stream: it is called with fusion.stream() or fusion.sse()
-		if (item.stream) {
-			warnings.push({ id, message: 'A generator is a stream and it is not registered as an action: call it with fusion.stream() or fusion.sse()' });
-			continue;
-		}
-		const action = { name: meta.name || id, summary: meta.summary || (item.doc ? item.doc.split('\n')[0] : id), mcp: meta.mcp === true };
+			warnings.push(...lint(id, meta));
 
-		for (const key of KEYS) {
-			if (meta[key] != null)
-				action[key] = meta[key];
-		}
+			// An action answers once. A generator is a stream: it is called with fusion.stream() or fusion.sse()
+			if (item.stream) {
+				warnings.push({ id, message: 'A generator is a stream and it is not registered as an action: call it with fusion.stream() or fusion.sse()' });
+				continue;
+			}
+			const action = { name: meta.name || id, summary: meta.summary || (item.doc ? item.doc.split('\n')[0] : id), mcp: meta.mcp === true };
 
-		// Python receives the input as it is. If the contract also declares `query` or `params`, it receives an object
-		// with the sections that were declared: { input, query, params }. Total.js has validated all of them.
-		const sections = meta.query != null || meta.params != null;
-
-		action.action = function($, model) {
-
-			let args = model;
-
-			if (sections) {
-				args = {};
-				if (meta.input != null)
-					args.input = model;
-				if (meta.query != null)
-					args.query = $.query;
-				if (meta.params != null)
-					args.params = $.params;
+			for (const key of KEYS) {
+				if (meta[key] != null)
+					action[key] = meta[key];
 			}
 
-			fusion.call(runtime, item.fn, args, { timeout: meta.timeout }).then(function(result) {
-				$.callback(result);
-			}, function(err) {
-				onerror(err, id);
-				// Only a ValueError (invalid input, by convention) reaches the client with its message.
-				// Any other failure may contain paths, queries or secrets, so it stays in the log.
-				$.invalid(err.code === 'REMOTE_ERROR' && err.remote.name === 'ValueError' ? err.remote.message : 'The action failed');
-			});
-		};
+			// Python receives the input as it is. If the contract also declares `query` or `params`, it receives an object
+			// with the sections that were declared: { input, query, params }. Total.js has validated all of them.
+			const sections = meta.query != null || meta.params != null;
 
-		NEWACTION(id, action);
-		ids.push(id);
+			action.action = function($, model) {
+
+				let args = model;
+
+				if (sections) {
+					args = {};
+					if (meta.input != null)
+						args.input = model;
+					if (meta.query != null)
+						args.query = $.query;
+					if (meta.params != null)
+						args.params = $.params;
+				}
+
+				fusion.call(runtime, item.fn, args, { timeout: meta.timeout }).then(function(result) {
+					$.callback(result);
+				}, function(err) {
+					onerror(err, id);
+					// Only a ValueError (invalid input, by convention) reaches the client with its message.
+					// Any other failure may contain paths, queries or secrets, so it stays in the log.
+					$.invalid(err.code === 'REMOTE_ERROR' && err.remote.name === 'ValueError' ? err.remote.message : 'The action failed');
+				});
+			};
+
+			NEWACTION(id, action);
+			ids.push(id);
+		}
+
+		return { ids, warnings };
 	}
+
+	const built = build(found);
 
 	// Loads the models now (at boot) instead of on the first request
 	if (options.warmup)
 		await fusion.warmup(runtime);
 
-	return { ids, errors: found.errors, warnings };
+	const result = { ids: built.ids, errors: found.errors, warnings: built.warnings };
+
+	// Development: when the code changes the workers are replaced (fusion.watch) and the contracts are read again, so a new
+	// function, a changed contract or a removed function is there without restarting the application.
+	if (options.watch) {
+
+		let registered = built.ids;
+
+		const watcher = fusion.watch(runtime, {
+			log: options.log,
+			debounce: options.debounce,
+			onreload: function(info) {
+				fusion.describe(runtime).then(function(found) {
+
+					const again = build(found);
+
+					// While a file has errors its functions are missing from the list: nothing is removed until it is fixed
+					if (!found.errors.length) {
+						for (const id of registered) {
+							if (!again.ids.includes(id) && global.F && F.actions[id])
+								F.actions[id].remove();
+						}
+					}
+
+					for (const error of found.errors)
+						console.error('[totalfusion] ' + (error.module || runtime) + (error.function ? '.' + error.function : '') + ': ' + error.message);
+
+					registered = found.errors.length ? Array.from(new Set(registered.concat(again.ids))) : again.ids;
+
+					if (options.onreload)
+						options.onreload({ runtime, files: info.files, replaced: info.replaced, ids: again.ids, errors: found.errors, warnings: again.warnings });
+
+				}, function(err) {
+					console.error('[totalfusion] cannot read the contracts of ' + runtime + ': ' + err.message.split('\n')[0]);
+				});
+			}
+		});
+
+		result.close = watcher.close;
+	}
+
+	return result;
 };

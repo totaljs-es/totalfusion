@@ -36,4 +36,23 @@ module.exports = function() {
 	return built = Path.join(process.env.CARGO_TARGET_DIR || Path.join(DIRECTORY, 'target'), 'release', 'test-worker' + (process.platform === 'win32' ? '.exe' : ''));
 };
 
+// A second, different worker: the example of the repository
+let example;
+
+module.exports.example = function() {
+
+	if (example !== undefined)
+		return example;
+
+	const command = module.exports() && cargo();
+
+	if (!command)
+		return example = null;
+
+	const directory = Path.join(__dirname, '..', 'examples', 'rust');
+	execFileSync(command, ['build', '--release', '--quiet'], { cwd: directory, stdio: 'pipe', timeout: 600000 });
+
+	return example = Path.join(process.env.CARGO_TARGET_DIR || Path.join(directory, 'target'), 'release', 'worker' + (process.platform === 'win32' ? '.exe' : ''));
+};
+
 module.exports.skip = () => module.exports() ? false : 'Rust is not installed (cargo was not found)';

@@ -98,6 +98,16 @@ exports.describe = function(config) {
 	});
 };
 
+// What to watch to reload the workers when the code changes: the .py files of the components
+exports.watchTarget = function(config) {
+	return {
+		path: components(config),
+		recursive: true,
+		skip: name => name.startsWith('.') || name === '__pycache__' || name === 'node_modules' || name === 'site-packages',
+		accept: name => /\.py$/.test(name) && !/(^|[\\/])(\.|__pycache__|node_modules|site-packages)/.test(name)
+	};
+};
+
 const PROBE = 'import json, sys; print(json.dumps({"version": list(sys.version_info[:3]), "executable": sys.executable, "prefix": sys.prefix, "base_prefix": getattr(sys, "base_prefix", sys.prefix)}))';
 
 function run(command, args, options) {

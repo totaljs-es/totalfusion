@@ -42,6 +42,14 @@ exports.create = function(config) {
 	}));
 };
 
+// What to watch to reload the workers when the worker is built again: the binary
+exports.watchTarget = function(config) {
+
+	const file = binary(config);
+
+	return { path: Path.dirname(file), recursive: false, accept: name => name === Path.basename(file) };
+};
+
 function describe(file, config) {
 	return new Promise(function(resolve, reject) {
 		execFile(file, ['--describe'], { cwd: config.cwd || Path.dirname(file), env: config.env || process.env, timeout: 15000, maxBuffer: 16 * 1024 * 1024, windowsHide: true }, function(err, stdout, stderr) {
