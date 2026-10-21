@@ -13,9 +13,9 @@ def analyze(data):
 
 ```js
 // Total.js application
-const { register } = require('totalfusion/total5');
+const fusion = REQUIRE('totalfusion');
 
-await register({ python: { path: PATH.root('python') } });
+await fusion.register({ python: { path: PATH.root('python') } });
 
 // 'sentiment/analyze' is now a Total.js action: ACTION(), API routes and an MCP tool for AI agents
 ```
@@ -109,23 +109,30 @@ What to do with it:
 - **Small models:** one worker per core you want to use scales almost linearly.
 - **Large models:** start with `workers: 1` or `2`. PyTorch already uses several threads inside one process, so four workers gave +20% throughput over two for twice the memory. Setting `OMP_NUM_THREADS` through the `env` option did not change that noticeably.
 - **Use `preload`.** The `timeout` of a call starts when it is sent to a worker, so a model loaded lazily on the first call would count its loading time against that call. With `preload` the worker reports ready only after loading, and the load has its own limit (`startTimeout`, 30 s by default, raise it for big models).
-- **Use `warmup`.** Workers start with the first call. `await fusion.warmup('python')` (or `register({ warmup: true })`) starts them all at boot, so the first request does not wait for the model: the first request through MCP went from 2.4 s to about 22 ms (later ones take 9-12 ms), with the boot taking the 2.6 s instead.
+- **Use `warmup`.** Workers start with the first call. `await fusion.warmup('python')` (or `fusion.register({ warmup: true })`) starts them all at boot, so the first request does not wait for the model: the first request through MCP went from 2.4 s to about 22 ms (later ones take 9-12 ms), with the boot taking the 2.6 s instead.
 - **Keep input shapes fixed.** PyTorch on CPU prepares its kernels per tensor shape, and the first call with each new sequence length took 130-250 ms. Padding to a fixed length in `@startup` and in the function removed every slow call (40 different sentences, all between 7 and 9 ms). See [sentiment.py](examples/components/sentiment.py).
 
 ### Total.js 5
 
 ```js
-const { register } = require('totalfusion/total5');
+// definitions/fusion.js
+const fusion = REQUIRE('totalfusion');
 
-await register({ python: { path: PATH.root('python'), workers: 2 } });
+exports.install = function() {
+	fusion.register({ python: { path: PATH.root('python'), workers: 2 } }).then(function(result) {
+		console.log('TotalFusion:', result.ids.join(', '));
+	});
+};
 ```
+
+`register` is asynchronous (it reads the contracts with a short Python process) and resolves with `{ ids, errors, warnings }`. `require('totalfusion')` works the same as `REQUIRE('totalfusion')`.
 
 Every function decorated with `@action` becomes a `NEWACTION()` named `<module>/<function>` (change it with `prefix` or `@action(id=...)`). Because they are normal actions they work with `ACTION()` and `API` routes (`ROUTE('API /v1/ +count --> contract/count')`). `register` also adds the modules with `@startup` to `preload` automatically.
 
 - **Validation first.** Total.js validates `input` with the contract before Python runs, so invalid data never reaches your function.
 - **MCP is opt-in.** Only functions with `mcp=True` are exposed to agents (`CONF.$mcp = true` enables the endpoint). Everything else stays internal.
 - **Errors.** A Python `ValueError` is treated as the caller's mistake and its message reaches the client. Any other exception returns `The action failed`, and the real error goes to `onerror` (default: `console.error`), so paths, queries or secrets inside exception messages are not leaked.
-- **Boot.** `register({ warmup: true })` loads the models before it resolves, and `preload: false` leaves the modules with `@startup` to load on their first call.
+- **Boot.** `fusion.register({ warmup: true })` loads the models before it resolves, and `preload: false` leaves the modules with `@startup` to load on their first call.
 - **Schemas.** Total.js splits the fields of a schema on commas **even inside a `// comment`**, so `'*text:String // Text, up to 2000 chars'` declares a second field called `up to 2000 chars`. `register` returns a `warnings` list for it: use parentheses or a new line.
 - **MCP.** Exposing an action as a tool uses the MCP router of Total.js 5 (`CONF.$mcp = true`). Actions and API routes work without it.
 

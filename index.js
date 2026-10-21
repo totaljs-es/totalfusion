@@ -20,6 +20,7 @@ class Fusion {
 		this.python = this.python.bind(this);
 		this.describe = this.describe.bind(this);
 		this.warmup = this.warmup.bind(this);
+		this.register = this.register.bind(this);
 		this.stats = this.stats.bind(this);
 		this.shutdown = this.shutdown.bind(this);
 
@@ -93,6 +94,13 @@ class Fusion {
 		} catch (err) {
 			return Promise.reject(err);
 		}
+	}
+
+	// Total.js 5: registers the functions decorated with @action as actions (and MCP tools). Loaded only when used.
+	//   const fusion = REQUIRE('totalfusion');
+	//   await fusion.register({ python: { path: PATH.root('python') } });
+	register(options) {
+		return require('./total5').register(Object.assign({ fusion: this }, options));
 	}
 
 	stats() {

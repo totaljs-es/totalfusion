@@ -8,7 +8,6 @@ const Path = require('path');
 process.env.FUSION_TEST_SHUTDOWN_FILE = process.argv[3];
 require(process.argv[2]);
 
-const { register } = require('../total5');
 const fusion = require('..');
 
 CONF.$imprint = false;
@@ -26,7 +25,7 @@ function run(id, input) {
 
 	const report = {};
 
-	report.registered = await register({ python: { path: Path.join(__dirname, 'components'), forwardStderr: false, env: process.env }, onerror: err => report.logged = err.code });
+	report.registered = await fusion.register({ python: { path: Path.join(__dirname, 'components'), forwardStderr: false, env: process.env }, onerror: err => report.logged = err.code });
 
 	report.count = await run('contract/count', { text: 'one two three four' });
 	report.invalid = await run('contract/count', {});
