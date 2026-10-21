@@ -132,6 +132,7 @@ Every function decorated with `@action` becomes a `NEWACTION()` named `<module>/
 - **Validation first.** Total.js validates `input` with the contract before Python runs, so invalid data never reaches your function.
 - **MCP is opt-in.** Only functions with `mcp=True` are exposed to agents (`CONF.$mcp = true` enables the endpoint). Everything else stays internal.
 - **Errors.** A Python `ValueError` is treated as the caller's mistake and its message reaches the client. Any other exception returns `The action failed`, and the real error goes to `onerror` (default: `console.error`), so paths, queries or secrets inside exception messages are not leaked.
+- **Generators.** A function that yields is a stream, not an action: `register` skips it with a warning. Call it with `fusion.stream()` or `fusion.sse()`.
 - **Boot.** `fusion.register({ warmup: true })` loads the models before it resolves, and `preload: false` leaves the modules with `@startup` to load on their first call.
 - **Schemas.** Total.js splits the fields of a schema on commas **even inside a `// comment`**, so `'*text:String // Text, up to 2000 chars'` declares a second field called `up to 2000 chars`. `register` returns a `warnings` list for it: use parentheses or a new line.
 - **MCP.** Exposing an action as a tool uses the MCP router of Total.js 5 (`CONF.$mcp = true`). Actions and API routes work without it.
@@ -171,6 +172,44 @@ From Python, `bytes`, `bytearray`, `memoryview`, `array.array` and anything with
 - A frame can carry up to 512 MB in total, of which at most 64 MB can be JSON.
 - Measured against sending the same bytes as base64 inside JSON: 1 MB in 0.5 ms instead of 4.4 ms, 32 MB in 14 ms instead of 145 ms, and a 100 MB buffer (133 MB as base64, over the JSON limit) in 43 ms.
 
+### Streaming
+
+A Python function that **yields** is a stream: each `yield` reaches Node.js as soon as it happens. Generators can be `def` or `async def`.
+
+```python
+# python/llm.py
+def generate(data):
+    for token in model.generate(data['prompt']):
+        yield token
+```
+
+```js
+for await (const token of fusion.python.stream('llm.generate', { prompt: 'Hello' })) {
+    process.stdout.write(token);
+}
+```
+
+`fusion.stream('python', fn, args, options)` and `fusion.python.stream(fn, args, options)` return an async iterable; `.toArray()` collects everything.
+
+- **Backpressure.** The worker may run ahead of the consumer by `highWaterMark` chunks (16 by default). Each chunk you read gives it one more. A slow consumer slows the generator down instead of filling memory: with `highWaterMark: 4`, after reading 2 chunks an endless generator had advanced only to its 6th, and with no limit it kept running.
+- **Cancellation.** Leaving the loop (`break`, `return`, an exception) or aborting the `AbortSignal` stops the generator in Python and frees the worker. An `async def` generator is interrupted where it waits; a `def` generator stops between two chunks, and one that blocks without yielding is killed after `cancelGrace`, like any synchronous function.
+- **Timeout.** For a stream `timeout` is the longest time **without progress**: no chunk produced and none read. A stream can last as long as it needs while it keeps moving.
+- **Errors.** The chunks that were produced before a failure are delivered first, then the error with its Python traceback.
+- A generator called with `fusion.python()` fails with `STREAMING_FUNCTION`, and a normal function called with `stream()` is a stream of one chunk.
+- Chunks can carry binary data like any other value.
+
+Measured with a real model (DistilGPT2 on CPU, 40 tokens): the first token arrives after 61 ms and a new one every 7 ms. Cutting the stream after 5 tokens of a 500-token request stopped the generation in 43 ms.
+
+#### Server-Sent Events from a Total.js route
+
+```js
+ROUTE('GET /generate/', function($) {
+    fusion.sse($, fusion.python.stream('llm.generate', { prompt: $.query.prompt }));
+});
+```
+
+`fusion.sse($, stream)` sends every chunk as `data: <json>`, the end as `event: end` and a failure as `event: error`. If the browser disconnects, the generator is cancelled, so a model does not keep generating for nobody. As in the actions, only the message of a `ValueError` reaches the client.
+
 ### Errors
 
 Every error is a `FusionError` with a stable `code`.
@@ -179,6 +218,8 @@ Every error is a `FusionError` with a stable `code`.
 |---|---|
 | `REMOTE_ERROR` | The Python function raised. `err.remote` has `name`, `message` and `traceback`, and the traceback is appended to `err.stack`. |
 | `TIMEOUT` / `ABORTED` | The call exceeded its timeout or its `AbortSignal` fired. |
+| `STREAMING_FUNCTION` | A generator was called with `fusion.python()`: use `fusion.stream()`. |
+| `CANCELLED` | The stream was cancelled by its consumer. |
 | `WORKER_CRASHED` | The worker died during the call. The call is **not** retried, because it may have had side effects. The worker is replaced. |
 | `QUEUE_FULL` | The bounded queue is full: backpressure instead of unbounded memory growth. |
 | `NOT_FOUND` | Unknown module or function (or not exposed). |

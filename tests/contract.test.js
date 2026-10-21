@@ -29,6 +29,9 @@ describe('describe', function() {
 		assert.equal(count.doc, 'Counts the words of a text.');
 		assert.equal(found.actions.find(item => item.fn === 'contract.double').async, true);
 		assert.deepEqual(found.actions.find(item => item.fn === 'contract.bare').meta, {});
+		assert.equal(found.actions.find(item => item.fn === 'contract.count_up').stream, true);
+		assert.equal(found.actions.find(item => item.fn === 'contract.count').stream, false);
+		assert.equal(found.actions.find(item => item.fn === 'contract.double').stream, false);
 	});
 
 	test('functions without @action are not described, private ones neither', async function() {

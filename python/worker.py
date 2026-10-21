@@ -234,6 +234,21 @@ def decorator(node, name):
     return None
 
 
+def yields(node):
+    """True when the function itself (not a nested function) contains `yield`: it is a generator."""
+
+    pending = list(ast.iter_child_nodes(node))
+
+    while pending:
+        item = pending.pop()
+        if isinstance(item, (ast.Yield, ast.YieldFrom)):
+            return True
+        if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)):
+            pending.extend(ast.iter_child_nodes(item))
+
+    return False
+
+
 def describe():
     """Reads the contracts declared with @action without importing anything (no side effects, no models loaded)."""
 
@@ -284,11 +299,88 @@ def describe():
                     'module': module,
                     'name': node.name,
                     'async': isinstance(node, ast.AsyncFunctionDef),
+                    'stream': yields(node),
                     'doc': ast.get_docstring(node),
                     'meta': meta
                 })
 
     return {'actions': actions, 'startups': startups, 'errors': errors}
+
+
+class NotSerializable(Exception):
+    pass
+
+
+async def wait_credit(entry):
+    """A stream only advances while the consumer has credit: this is the backpressure."""
+    while entry['credit'] <= 0 and not entry['cancelled']:
+        entry['wake'].clear()
+        await entry['wake'].wait()
+
+
+def emit(id, entry, item):
+    try:
+        send({'t': 'chunk', 'id': id, 'data': item})
+    except (TypeError, ValueError) as e:
+        raise NotSerializable('A chunk cannot be serialized to JSON: %s' % e)
+    entry['credit'] -= 1
+
+
+async def stream_items(loop, id, entry, fn, args):
+
+    if inspect.isasyncgenfunction(fn):
+
+        entry['async'] = True
+        generator = fn(args)
+
+        try:
+            while True:
+                await wait_credit(entry)
+                if entry['cancelled']:
+                    raise asyncio.CancelledError()
+                try:
+                    item = await generator.__anext__()
+                except StopAsyncIteration:
+                    return
+                emit(id, entry, item)
+        finally:
+            await generator.aclose()
+
+    elif inspect.isgeneratorfunction(fn):
+
+        generator = fn(args)
+        done = object()
+
+        def step():
+            try:
+                return next(generator)
+            except StopIteration:
+                return done
+
+        try:
+            while True:
+                await wait_credit(entry)
+                # A sync generator cannot be interrupted while it runs: it stops between two chunks
+                if entry['cancelled']:
+                    raise asyncio.CancelledError()
+                item = await loop.run_in_executor(executor, step)
+                if item is done:
+                    return
+                emit(id, entry, item)
+        finally:
+            try:
+                generator.close()
+            except ValueError:
+                pass
+
+    else:
+        # A normal function called as a stream is a stream of one chunk
+        if inspect.iscoroutinefunction(fn):
+            entry['async'] = True
+            result = await fn(args)
+        else:
+            result = await loop.run_in_executor(executor, fn, args)
+        emit(id, entry, result)
 
 
 async def run(loop, message):
@@ -298,6 +390,16 @@ async def run(loop, message):
 
     try:
         fn = await resolve(loop, message['fn'])
+        generator = inspect.isgeneratorfunction(fn) or inspect.isasyncgenfunction(fn)
+
+        if message.get('stream'):
+            await stream_items(loop, id, entry, fn, message.get('args'))
+            send({'t': 'res', 'id': id, 'ok': True, 'data': None})
+            return
+
+        if generator:
+            fail(id, 'TypeError', 'The function "%s" is a generator: call it with fusion.stream()' % message['fn'], 'STREAMING_FUNCTION')
+            return
 
         if inspect.iscoroutinefunction(fn):
             entry['async'] = True
@@ -312,6 +414,8 @@ async def run(loop, message):
 
     except asyncio.CancelledError:
         fail(id, 'CancelledError', 'The call was cancelled', 'CANCELLED')
+    except NotSerializable as e:
+        fail(id, 'TypeError', str(e), 'NOT_SERIALIZABLE')
     except LookupError as e:
         fail(id, 'LookupError', str(e).strip('"\''), 'NOT_FOUND')
     except BaseException as e:
@@ -325,13 +429,21 @@ def dispatch(loop, message):
     kind = message.get('t')
 
     if kind == 'call':
-        running[message['id']] = {'async': False, 'task': loop.create_task(run(loop, message))}
+        running[message['id']] = {'async': False, 'cancelled': False, 'credit': message.get('credit', 0), 'wake': asyncio.Event(), 'task': loop.create_task(run(loop, message))}
+    elif kind == 'credit':
+        entry = running.get(message.get('id'))
+        if entry:
+            entry['credit'] += message.get('n', 1)
+            entry['wake'].set()
     elif kind == 'cancel':
         # Only coroutines can be interrupted. Sync functions run in a thread and
         # cannot be stopped: the parent kills the worker if it does not finish in time.
         entry = running.get(message.get('id'))
-        if entry and entry['async']:
-            entry['task'].cancel()
+        if entry:
+            entry['cancelled'] = True
+            entry['wake'].set()
+            if entry['async']:
+                entry['task'].cancel()
     elif kind == 'ping':
         send({'t': 'pong', 'id': message.get('id')})
     elif kind == 'bye':

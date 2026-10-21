@@ -1,6 +1,7 @@
 'use strict';
 
 const { FusionError } = require('./lib/errors');
+const { FusionStream } = require('./lib/stream');
 
 // Adapters are loaded only when their runtime is used
 const ADAPTERS = {
@@ -18,9 +19,12 @@ class Fusion {
 		this.configure = this.configure.bind(this);
 		this.call = this.call.bind(this);
 		this.python = this.python.bind(this);
+		this.python.stream = (fn, args, options) => this.stream('python', fn, args, options);
 		this.describe = this.describe.bind(this);
 		this.warmup = this.warmup.bind(this);
 		this.register = this.register.bind(this);
+		this.stream = this.stream.bind(this);
+		this.sse = this.sse.bind(this);
 		this.stats = this.stats.bind(this);
 		this.shutdown = this.shutdown.bind(this);
 
@@ -51,6 +55,20 @@ class Fusion {
 			return this.pool(runtime).call(fn, args, options);
 		} catch (err) {
 			return Promise.reject(err);
+		}
+	}
+
+	// Calls a generator (a Python function that yields) and returns an async iterable of its chunks:
+	//   for await (const chunk of fusion.stream('python', 'llm.generate', { prompt })) ...
+	//   for await (const chunk of fusion.python.stream('llm.generate', { prompt })) ...
+	// options: timeout (longest time without progress), signal, highWaterMark (chunks the worker may run ahead, default 16)
+	stream(runtime, fn, args, options) {
+		try {
+			return this.pool(runtime).stream(fn, args, options);
+		} catch (err) {
+			const stream = new FusionStream(null);
+			stream.push({ error: err });
+			return stream;
 		}
 	}
 
@@ -101,6 +119,11 @@ class Fusion {
 	//   await fusion.register({ python: { path: PATH.root('python') } });
 	register(options) {
 		return require('./total5').register(Object.assign({ fusion: this }, options));
+	}
+
+	// Total.js 5: sends a stream to the browser as Server-Sent Events (see total5/index.js)
+	sse($, stream, options) {
+		return require('./total5').sse($, stream, options);
 	}
 
 	stats() {

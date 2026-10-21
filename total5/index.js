@@ -21,6 +21,42 @@ function lint(id, meta) {
 
 exports.lint = lint;
 
+// Sends a stream to the browser as Server-Sent Events from a Total.js route:
+//
+//   ROUTE('GET /generate/', function($) {
+//       fusion.sse($, fusion.python.stream('llm.generate', { prompt: $.query.prompt }));
+//   });
+//
+// Every chunk is an event `data: <json>`, the end is `event: end` and a failure is `event: error`.
+// When the browser disconnects the generator is cancelled, so a model does not keep generating for nobody.
+// As in the actions, only the message of a ValueError reaches the client; the real error goes to `onerror`.
+exports.sse = function($, stream, options) {
+
+	if (!options)
+		options = {};
+
+	const onerror = options.onerror || (err => console.error('[totalfusion] stream: ' + (err.stack || err)));
+	const { Readable } = require('stream');
+
+	$.res.once('close', () => stream.cancel());
+
+	async function* events() {
+		try {
+			for await (const chunk of stream)
+				yield 'data: ' + JSON.stringify(chunk) + '\n\n';
+			yield 'event: end\ndata: {}\n\n';
+		} catch (err) {
+			onerror(err);
+			yield 'event: error\ndata: ' + JSON.stringify({ message: err.code === 'REMOTE_ERROR' && err.remote.name === 'ValueError' ? err.remote.message : 'The stream failed' }) + '\n\n';
+		}
+	}
+
+	// No buffering in proxies such as nginx, and no cache
+	$.response.headers['cache-control'] = 'no-cache';
+	$.response.headers['x-accel-buffering'] = 'no';
+	$.stream('text/event-stream', Readable.from(events()));
+};
+
 // Registers every function decorated with @action as a Total.js 5 action, so it works with
 // ACTION(), API routes, FlowStream and (with mcp=True) as an MCP tool.
 //
@@ -68,6 +104,12 @@ exports.register = async function(options) {
 		const id = meta.id || (prefix + item.module.replace(/\./g, '/') + '/' + item.name);
 
 		warnings.push(...lint(id, meta));
+
+		// An action answers once. A generator is a stream: it is called with fusion.stream() or fusion.sse()
+		if (item.stream) {
+			warnings.push({ id, message: 'A generator is a stream and it is not registered as an action: call it with fusion.stream() or fusion.sse()' });
+			continue;
+		}
 		const action = { name: meta.name || id, summary: meta.summary || (item.doc ? item.doc.split('\n')[0] : id), mcp: meta.mcp === true };
 
 		for (const key of KEYS) {

@@ -33,7 +33,10 @@ test('registers @action functions as Total.js 5 actions and MCP tools', { skip: 
 
 	assert.deepEqual(report.registered.ids.sort(), ['contract/bare', 'contract/count', 'contract/double', 'contract/explode', 'contract/reject', 'slow/add_one']);
 	assert.deepEqual(report.registered.errors, []);
-	assert.deepEqual(report.registered.warnings, []);
+	// A generator is a stream, not an action: it is skipped with a warning
+	assert.equal(report.registered.warnings.length, 1);
+	assert.equal(report.registered.warnings[0].id, 'contract/count_up');
+	assert.match(report.registered.warnings[0].message, /fusion\.stream/);
 
 	// Python runs behind the action and the result is returned as is
 	assert.deepEqual(report.count, { ok: true, output: { words: 4 } });
@@ -66,4 +69,30 @@ test('registers @action functions as Total.js 5 actions and MCP tools', { skip: 
 	// @shutdown ran when the pool closed
 	assert.equal(Fs.readFileSync(file, 'utf8'), 'bye');
 	Fs.rmSync(file, { force: true });
+});
+
+test('streams Python generators to the browser as Server-Sent Events', { skip: total5 ? false : 'Total.js 5 not found (set TOTAL5_PATH)' }, function() {
+
+	const port = 8300 + (process.pid % 500);
+	const result = spawnSync(process.execPath, [Path.join(__dirname, 'sse-script.js'), total5, String(port)], { timeout: 60000, cwd: Os.tmpdir() });
+	assert.equal(result.status, 0, result.stderr.toString());
+
+	const report = JSON.parse(result.stdout.toString().trim().split('\n').pop());
+
+	assert.match(report.ticks.type, /text\/event-stream/);
+	assert.equal(report.ticks.cache, 'no-cache');
+	assert.deepEqual(report.ticks.got.map(event => event.text), ['data: {"tick":0}', 'data: {"tick":1}', 'data: {"tick":2}', 'data: {"tick":3}', 'event: end\ndata: {}']);
+
+	// they arrive while the generator runs, not all at the end
+	assert.ok(report.ticks.got[3].at - report.ticks.got[0].at >= 300);
+
+	// chunks before a failure, then an error event. Only a ValueError shows its message
+	assert.deepEqual(report.fails.got.map(event => event.text), ['data: 1', 'data: 2', 'event: error\ndata: {"message":"boom after two chunks"}']);
+
+	// A function that is not a generator is a stream of one chunk, and its RuntimeError stays hidden
+	assert.deepEqual(report.secret.got.map(event => event.text), ['event: error\ndata: {"message":"The stream failed"}']);
+
+	// The browser left after 3 events: the generator was cancelled in Python
+	assert.equal(report.endless.got.length, 3);
+	assert.equal(report.closed, true);
 });

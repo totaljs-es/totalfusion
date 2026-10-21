@@ -45,6 +45,12 @@ def reject(data):
     raise ValueError('value is not acceptable')
 
 
+@action(summary='Streams numbers', input='n:Number')
+def count_up(data):
+    for i in range(data['n']):
+        yield i
+
+
 def undecorated(data):
     return 'callable but not registered'
 
