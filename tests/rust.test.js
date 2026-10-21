@@ -526,3 +526,75 @@ describe('doctor', { skip }, function() {
 	});
 
 });
+
+describe('calls at the same time in one worker', { skip }, function() {
+
+	test('the calls run in parallel threads of the same process', async function() {
+		const fusion = create({ workers: 1, concurrency: 4 });
+		await fusion.rust('pid');
+		const started = Date.now();
+		const pids = await Promise.all(Array.from({ length: 4 }, () => fusion.rust('slow_pid', { ms: 400 })));
+		assert.ok(Date.now() - started < 800, 'they did not overlap');
+		assert.equal(new Set(pids).size, 1);
+		assert.equal(fusion.stats().rust.workers, 1);
+	});
+
+	test('by default a worker runs one call at a time', async function() {
+		const fusion = create({ workers: 1 });
+		await fusion.rust('pid');
+		const started = Date.now();
+		await Promise.all(Array.from({ length: 3 }, () => fusion.rust('slow_pid', { ms: 200 })));
+		assert.ok(Date.now() - started >= 550);
+	});
+
+	test('responses do not mix up', async function() {
+		const fusion = create({ workers: 2, concurrency: 8 });
+		const results = await Promise.all(Array.from({ length: 400 }, (_, i) => fusion.rust('math.add', { a: i, b: 1 })));
+		assert.deepEqual(results.map(item => item.sum), Array.from({ length: 400 }, (_, i) => i + 1));
+	});
+
+	test('several streams share a worker', async function() {
+		const fusion = create({ workers: 1, concurrency: 4 });
+		const results = await Promise.all([0, 100, 200].map(start => collect(fusion.rust.stream('count.up', { n: 4, start }))));
+		assert.deepEqual(results, [[0, 1, 2, 3], [100, 101, 102, 103], [200, 201, 202, 203]]);
+	});
+
+	test('a consumer that stops reading does not block the other calls (the writer is never held while waiting)', async function() {
+		const fusion = create({ workers: 1, concurrency: 4 });
+		const stalled = fusion.rust.stream('endless', {}, { highWaterMark: 2, timeout: 0 });
+		await stalled.next();
+		await wait(200);
+		assert.deepEqual(await fusion.rust('math.add', { a: 1, b: 2 }), { sum: 3 });
+		assert.deepEqual(await collect(fusion.rust.stream('count.up', { n: 3 })), [0, 1, 2]);
+		stalled.cancel();
+	});
+
+	test('a call that is cancelled does not hurt the ones next to it', async function() {
+		const fusion = create({ workers: 1, concurrency: 3 });
+		const pid = await fusion.rust('pid');
+		const [slow, neighbour] = await Promise.allSettled([
+			fusion.rust('sleep', { ms: 5000 }, { timeout: 150 }),
+			fusion.rust('sleep', { ms: 500 })
+		]);
+		assert.equal(slow.reason.code, 'TIMEOUT');
+		assert.equal(neighbour.value, 'done');
+		assert.equal(await fusion.rust('pid'), pid);
+	});
+
+	test('a panic fails only its own call', async function() {
+		const fusion = create({ workers: 1, concurrency: 3 });
+		const pid = await fusion.rust('pid');
+		const [boom, ok] = await Promise.allSettled([fusion.rust('boom'), fusion.rust('slow_pid', { ms: 200 })]);
+		assert.equal(boom.reason.remote.name, 'Panic');
+		assert.equal(ok.value, pid);
+	});
+
+	test('a crash of the process rejects every call that it was running', async function() {
+		const fusion = create({ workers: 1, concurrency: 3 });
+		await fusion.rust('pid');
+		const results = await Promise.allSettled([fusion.rust('sleep', { ms: 2000 }), fusion.rust('sleep', { ms: 2000 }), fusion.rust('crash')]);
+		assert.deepEqual(results.map(result => result.reason.code), ['WORKER_CRASHED', 'WORKER_CRASHED', 'WORKER_CRASHED']);
+		assert.ok(await fusion.rust('pid') > 0);
+	});
+
+});

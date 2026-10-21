@@ -97,7 +97,7 @@ The guide of the crate, with the whole API, is in [rust/README.md](rust/README.m
 
 - **Nothing is compiled for you.** `binary` is the path of a worker you built (or got precompiled), so the people who only run the application do not need Rust. `fusion.doctor('rust')` and `npx totalfusion doctor --binary ./worker` check that the file exists, can be executed, answers, speaks the same protocol version and is not a debug build.
 - **A panic fails one call, not the worker.** A crash of the process is a `WORKER_CRASHED` error and the worker is replaced; Node.js never goes down.
-- **Same options as Python:** `workers`, `timeout`, `maxQueue`, `maxCalls`, `maxMemory`, `healthInterval`, `cancelGrace`... plus `args`, `env` and `cwd` for the process.
+- **Same options as Python:** `workers`, `concurrency`, `timeout`, `maxQueue`, `maxCalls`, `maxMemory`, `healthInterval`, `cancelGrace`... plus `args`, `env` and `cwd` for the process. Every call of a worker runs in its own thread, so `concurrency` makes one process use all the cores (see [Several calls at the same time](#several-calls-at-the-same-time)).
 - **Contracts are declared in code**, with the same names as `@action` in Python (`summary`, `input`, `output`, `query`, `params`, `permissions`, `mcp`...). The binary prints them with `--describe`.
 - **Where Rust pays off.** Heavy CPU work that should not block Node.js and that can use several cores. For the longest Collatz chain below 3 million (the same algorithm in each language, eight cores): optimized JavaScript takes 1.2 s and Rust 0.33 s (3.6x; the naive JavaScript most people write is 14x slower than Rust), and pure Python is 48x slower than Rust. Eight of those jobs take 9.1 s in JavaScript, **blocking the event loop the whole time**, and 0.7 s on four Rust workers, which leave the event loop free (1 ms of delay). A call that does nothing costs 0.03 ms. For light work on small data, JavaScript in the same process wins: it pays no transfer.
 - **Windows:** the standard output is not redirected, so use `eprintln!` and not `println!` in a worker. Not tested there yet.
@@ -135,6 +135,7 @@ fusion.configure({
     python: {
         path: './python',      // directory with your components (default: ./python)
         workers: 4,            // pool size, started on demand (default: 1)
+        concurrency: 1,        // calls a worker runs at the same time (default: 1)
         timeout: 30000,        // ms per call, 0 disables (default: 30000)
         preload: ['classifier'], // modules to import (and run @startup) before a worker is ready
         maxQueue: 1000,        // pending calls before QUEUE_FULL (default: 1000)
@@ -310,6 +311,33 @@ ROUTE('GET /generate/', function($) {
 ```
 
 `fusion.sse($, stream)` sends every chunk as `data: <json>`, the end as `event: end` and a failure as `event: error`. If the browser disconnects, the generator is cancelled, so a model does not keep generating for nobody. As in the actions, only the message of a `ValueError` reaches the client.
+
+### Several calls at the same time
+
+By default a worker runs **one call at a time** and the work is spread over the processes. With `concurrency: N` each worker runs up to N calls at once, which is what you want when a call spends most of its time waiting, and for Rust, where every call runs in its own thread.
+
+```js
+fusion.configure({ python: { workers: 1, concurrency: 64 } });   // 64 calls waiting for an API at once
+fusion.configure({ rust: { binary, workers: 1, concurrency: 8 } });   // 8 threads in one process
+```
+
+| Scenario | Configuration | Time | Processes / memory |
+|---|---|---|---|
+| Python, 64 calls that wait 0.2 s | 4 workers, `concurrency: 1` | 3.23 s | 4 / 94 MB |
+| | 4 workers, `concurrency: 16` | 0.21 s | 4 / 93 MB |
+| | 1 worker, `concurrency: 64` | 0.21 s | 1 / 24 MB |
+| Rust, 8 CPU jobs of 0.33 s (8 cores) | 1 worker, `concurrency: 1` | 2.68 s | 1 |
+| | 4 workers, `concurrency: 1` | 0.74 s | 4 |
+| | 8 workers, `concurrency: 1` | 0.60 s | 8 |
+| | 1 worker, `concurrency: 8` | 0.49 s | 1 |
+
+- **The next call goes to the least loaded worker**, and a new worker is started only when the room of the existing ones is not enough.
+- **Python:** `async def` functions overlap, and `def` functions run in threads. Because of the GIL, pure-Python computation does not speed up that way (use more `workers` for it); waiting for a network, a disk or a library that releases the GIL does. Calls that overlap in a worker **share its module state**: a global that a function modifies is not safe unless you protect it.
+- **Rust:** the handlers must be `Send + Sync`, which the compiler checks. The calls of a worker share its memory, so one loaded model serves all of them.
+- **A call that cannot be cancelled costs the worker.** After a timeout the worker is asked to cancel the call; if it cannot (a `def` function in Python that does not return, a Rust function that never looks at `is_cancelled()`), the worker is killed after `cancelGrace` and **the calls that were running next to it fail** with `WORKER_CRASHED`. A crash does the same. Async functions in Python and functions that check `is_cancelled()` in Rust are cancelled alone.
+- **A stream keeps its slot until it ends.** A consumer that stops reading does not block the other calls of the worker, but it does hold one slot until the stream times out or is cancelled.
+- **Recycling and the health check wait for the calls in progress:** a worker that reaches `maxCalls` leaves when the last of its calls ends, and only workers with nothing running are pinged.
+- `fusion.stats()` shows `running` (calls in progress) for the pool and for every worker.
 
 ### Keeping workers healthy
 

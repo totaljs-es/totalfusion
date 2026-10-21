@@ -65,6 +65,9 @@ exports.create = function(config) {
 	if (config.preload && config.preload.length)
 		args.push('--preload', [].concat(config.preload).join(','));
 
+	if (config.concurrency > 1)
+		args.push('--concurrency', String(Math.floor(config.concurrency)));
+
 	return new Pool(Object.assign(poolOptions('python', config), {
 		installHint: installHint(config),
 		hint: 'Python interpreter "' + python + '" not found. Install Python 3.9+ or set `python`, `venv` or TOTALFUSION_PYTHON',

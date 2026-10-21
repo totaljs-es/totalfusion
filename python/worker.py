@@ -733,6 +733,10 @@ def main():
         out.flush()
         os._exit(0)
 
+    # Sync functions run in threads: as many as the calls the worker is allowed to run at the same time
+    global executor
+    executor = ThreadPoolExecutor(max_workers=max(8, int(args[args.index('--concurrency') + 1])) if '--concurrency' in args else 8)
+
     sys.path.insert(0, root)
     sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sdk'))
 
