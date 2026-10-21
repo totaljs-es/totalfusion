@@ -4,6 +4,7 @@
 
 The first version.
 
+- **Documentation:** a short README and a `docs/` folder with a guide, one page per runtime (Python, Rust and the plan for Go), use cases with their measured numbers, a reference and the security notes.
 - **Runtimes:** Python (3.9 or newer) and Rust, as pools of worker processes that Node.js supervises. Both speak the same protocol (version 2), so every feature below works with both.
 - **Calls:** correlated by id, with timeouts, `AbortSignal` cancellation, a bounded queue, and real tracebacks (Python) or errors with a name and a code (Rust) in the JavaScript error. A call is never retried by itself: it may have had side effects.
 - **Contracts:** `@action(...)` in Python and `.summary().input().output()...` in Rust declare what a function takes and returns, in the schema syntax of Total.js. They are read without running any code.

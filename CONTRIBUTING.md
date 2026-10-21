@@ -11,6 +11,10 @@ cargo test --manifest-path rust/Cargo.toml        # the crate
 - Total.js 5: the integration tests look in `TOTAL5_PATH`, in the `total5` package and in a sibling `../framework5`; without it they are skipped.
 - `TOTALFUSION_PYTHON=/path/to/python npm test` runs the suite with another Python. `TOTALFUSION_TEST_NUMPY=/path/to/python` enables the NumPy tests.
 
+Run the tests with `PYTHONDONTWRITEBYTECODE` **unset** as well (`env -u PYTHONDONTWRITEBYTECODE npm test`): some environments set it, and then Python never writes the bytecode that every CI runner does write. A bug of that kind hid from us for a long time.
+
+The documentation is tested too (`tests/docs.test.js` checks that every link and anchor leads somewhere and that every page is reachable from `docs/README.md`), so change it together with the code.
+
 A change should come with tests. When you fix something, check that the test fails without the fix.
 
 ## How it is organised
