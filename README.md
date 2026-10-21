@@ -1,5 +1,13 @@
 # TotalFusion
 
+<p align="center">
+  <a href="docs/python.md"><img src="docs/assets/python.svg" alt="Python" height="56"></a>&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="docs/rust.md"><img src="docs/assets/rust.svg" alt="Rust" height="56"></a>&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="docs/go.md"><img src="docs/assets/go.svg" alt="Go" height="56"></a>
+</p>
+
+<p align="center"><sub>Python and Rust today, Go planned &middot; for Total.js and Node.js</sub></p>
+
 **Extends Total.js with other runtimes.** Call functions written in Python and Rust from Total.js and Node.js as plain `async` functions, and use them as Actions, API endpoints and MCP tools for AI agents, without leaving JavaScript. Go is planned.
 
 ```python
@@ -105,6 +113,10 @@ Not verified: the FlowStream component inside the Flow designer (it was run with
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the tests and how the project is organised, and [CHANGELOG.md](CHANGELOG.md) for what each version contains.
+
+## Credits
+
+The logos of Python, Rust and Go in the header come from [Simple Icons](https://simpleicons.org) (version 16.35.0, CC0) and only identify the languages. Python is a trademark of the Python Software Foundation, Rust of the Rust Foundation and Go of Google. TotalFusion is not affiliated with or endorsed by any of them. The files are in [docs/assets](docs/assets) and can be replaced by other versions of the logos.
 
 ## License
 

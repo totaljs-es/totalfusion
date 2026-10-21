@@ -108,6 +108,34 @@ test('every anchor of the documentation leads to a heading that exists', functio
 	assert.deepEqual(broken, []);
 });
 
+test('the images and the HTML links lead to files that exist, and every image has a text for those who cannot see it', function() {
+
+	const broken = [];
+
+	for (const file of PAGES) {
+
+		const text = prose(file).join('\n');
+
+		for (const image of text.matchAll(/<img\b[^>]*>/g)) {
+			if (!/\balt="[^"]+"/.test(image[0]))
+				broken.push(file + ': ' + image[0] + ' has no alt text');
+		}
+
+		for (const match of text.matchAll(/\b(?:src|href)="([^"]+)"/g)) {
+
+			const target = match[1];
+
+			if (/^(https?:|mailto:|#)/.test(target))
+				continue;
+
+			if (!Fs.existsSync(Path.join(ROOT, Path.dirname(file), target.split('#')[0])))
+				broken.push(file + ' -> ' + target);
+		}
+	}
+
+	assert.deepEqual(broken, []);
+});
+
 test('every page of docs/ is reachable from the index', function() {
 
 	const indexed = new Set(links(Path.join('docs', 'README.md')).map(target => target.split('#')[0]));
