@@ -6,6 +6,7 @@ const { spawn, execFile } = require('child_process');
 const { Pool, bytes } = require('../lib/pool');
 const { FusionError } = require('../lib/errors');
 const { Report, shell } = require('../lib/doctor');
+const { poolOptions } = require('../lib/options');
 const PIP_NAMES = require('./pip-names.json');
 
 const WORKER = Path.join(__dirname, 'worker.py');
@@ -64,22 +65,11 @@ exports.create = function(config) {
 	if (config.preload && config.preload.length)
 		args.push('--preload', [].concat(config.preload).join(','));
 
-	return new Pool({
-		name: 'python',
-		workers: config.workers,
-		timeout: config.timeout,
-		maxQueue: config.maxQueue,
-		startTimeout: config.startTimeout,
-		cancelGrace: config.cancelGrace,
-		maxCalls: config.maxCalls,
-		maxMemory: config.maxMemory,
-		healthInterval: config.healthInterval,
-		healthTimeout: config.healthTimeout,
-		forwardStderr: config.forwardStderr,
+	return new Pool(Object.assign(poolOptions('python', config), {
 		installHint: installHint(config),
 		hint: 'Python interpreter "' + python + '" not found. Install Python 3.9+ or set `python`, `venv` or TOTALFUSION_PYTHON',
 		spawn: () => spawn(python, args, { cwd: root, env: config.env || process.env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
-	});
+	}));
 };
 
 // Reads the @action contracts of the components with a one-shot process. Nothing is imported or executed.

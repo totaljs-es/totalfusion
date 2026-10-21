@@ -150,3 +150,7 @@ vite.config.ts.timestamp-*
 
 # Source maps written by Total.js when it runs a script
 *.js.map
+
+# Rust build output
+target/
+rust/Cargo.lock

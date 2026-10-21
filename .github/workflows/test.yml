@@ -39,4 +39,8 @@ jobs:
       # (the MCP checks are skipped when it does not include the MCP router).
       - run: npm install --no-save total5
 
+      # The crate of the Rust workers. The runners already have the stable toolchain.
+      - run: cargo test --manifest-path rust/Cargo.toml
+
+      # Builds the Rust worker of the tests and runs everything
       - run: npm test

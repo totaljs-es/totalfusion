@@ -101,7 +101,7 @@ exports.register = async function(options) {
 	for (const item of found.actions) {
 
 		const meta = item.meta;
-		const id = meta.id || (prefix + item.module.replace(/\./g, '/') + '/' + item.name);
+		const id = meta.id || (prefix + (item.module ? item.module.replace(/\./g, '/') + '/' : '') + item.name);
 
 		warnings.push(...lint(id, meta));
 

@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 'use strict';
 
-// totalfusion doctor [--path DIR] [--venv DIR] [--python COMMAND] [--requirements FILE] [--preload a,b] [--max-memory 2gb] [--json]
+// totalfusion doctor [--runtime python|rust] [--path DIR] [--venv DIR] [--python COMMAND] [--requirements FILE] [--preload a,b]
+//                      [--binary FILE] [--max-memory 2gb] [--json]
 //
 // Checks the interpreter, the components and the libraries they need, without importing or installing anything.
 // Exit code: 0 when everything is in order (warnings are only advice), 1 when something has to be fixed, 2 for a wrong usage.
 
 const fusion = require('..');
 
-const options = { string: ['path', 'venv', 'python', 'requirements', 'preload', 'max-memory'] };
+const options = { string: ['runtime', 'path', 'venv', 'python', 'requirements', 'preload', 'binary', 'max-memory'] };
 const args = process.argv.slice(2);
 const command = args[0] && !args[0].startsWith('-') ? args.shift() : null;
 const values = {};
@@ -32,7 +33,7 @@ for (let i = 0; i < args.length; i++) {
 }
 
 if (command !== 'doctor') {
-	console.error('Usage: totalfusion doctor [--path DIR] [--venv DIR] [--python COMMAND] [--requirements FILE] [--preload a,b] [--max-memory 2gb] [--json]');
+	console.error('Usage: totalfusion doctor [--runtime python|rust] [--path DIR] [--venv DIR] [--python COMMAND] [--requirements FILE] [--preload a,b] [--binary FILE] [--max-memory 2gb] [--json]');
 	process.exit(2);
 }
 
@@ -53,12 +54,22 @@ if (values.requirements)
 if (values.preload)
 	config.preload = values.preload.split(',');
 
+if (values.binary)
+	config.binary = values.binary;
+
 if (values['max-memory'])
 	config.maxMemory = values['max-memory'];
 
-fusion.configure({ python: config });
+const runtime = values.runtime || (values.binary ? 'rust' : 'python');
 
-fusion.doctor('python').then(function(report) {
+if (!['python', 'rust'].includes(runtime)) {
+	console.error('Unknown runtime: ' + runtime);
+	process.exit(2);
+}
+
+fusion.configure({ [runtime]: config });
+
+fusion.doctor(runtime).then(function(report) {
 	console.log(json ? JSON.stringify(report, null, 2) : report.text);
 	process.exit(report.ok ? 0 : 1);
 }, function(err) {

@@ -1,6 +1,6 @@
 # TotalFusion
 
-**Extends the capabilities of Total.js with other runtimes.** Python is the first one: bring machine learning, scientific computing and any Python library into a Total.js application as ordinary Actions, API endpoints and MCP tools, without leaving JavaScript.
+**Extends the capabilities of Total.js with other runtimes.** Python and Rust today: bring machine learning, scientific computing, any Python library and native speed into a Total.js application as ordinary Actions, API endpoints and MCP tools, without leaving JavaScript.
 
 ```python
 # python/sentiment.py
@@ -45,9 +45,62 @@ What the test suite (104 tests) has been run against:
 | Node.js | 20, 22, 24 |
 | Python | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.15 |
 | Total.js | `total5` 0.0.19-8 from npm and the 0.0.20 development version |
+| Rust | 1.99 (the `totalfusion` crate and its worker) |
 | Operating system | macOS on Apple silicon |
 
 Linux and Windows are not verified yet. The GitHub Actions workflow in [.github/workflows/test.yml](.github/workflows/test.yml) runs the suite on Linux, macOS and Windows with those Node.js and Python versions, but it has not run yet. On Windows the memory of a worker is not reported, so `maxMemory` has no effect there.
+
+## Rust
+
+Write the functions in Rust, build a binary, and call it like the Python ones. A Rust worker is an **isolated process** that speaks the same protocol, so everything in this README applies to it as well: the pool, timeouts, cancellation, [binary data](#binary-data), [streaming](#streaming), [recycling and health checks](#keeping-workers-healthy), Total.js actions, MCP tools and the `doctor`.
+
+```rust
+// rust/src/main.rs
+use totalfusion::{object, App, Call, Error};
+
+fn main() {
+    App::new()
+        .function("collatz.longest", |call: &Call| {
+            let limit = call.args["limit"].as_i64().ok_or_else(|| Error::invalid("limit must be a number"))?;
+            Ok(object! { "number" => limit })   // the real work goes here
+        })
+        .summary("Finds the number with the longest Collatz chain")
+        .input("*limit:Number")
+        .mcp(true)
+        .run();
+}
+```
+
+The crate is not on crates.io: the npm package ships its sources, so the `Cargo.toml` of your worker points to them:
+
+```toml
+[dependencies]
+totalfusion = { path = "../node_modules/totalfusion/rust" }
+```
+
+```bash
+cargo build --release
+```
+
+```js
+fusion.configure({ rust: { binary: './rust/target/release/worker', workers: 4 } });
+
+const result = await fusion.rust('collatz.longest', { limit: 3000000 });
+
+for await (const chunk of fusion.rust.stream('events.watch', { topic: 'x' })) { /* ... */ }
+
+// Total.js: the functions that declare their contract become actions
+await fusion.register({ runtime: 'rust', rust: { binary: './rust/target/release/worker' } });
+```
+
+The guide of the crate, with the whole API, is in [rust/README.md](rust/README.md). A complete example is in [examples/rust](examples/rust).
+
+- **Nothing is compiled for you.** `binary` is the path of a worker you built (or got precompiled), so the people who only run the application do not need Rust. `fusion.doctor('rust')` and `npx totalfusion doctor --binary ./worker` check that the file exists, can be executed, answers, speaks the same protocol version and is not a debug build.
+- **A panic fails one call, not the worker.** A crash of the process is a `WORKER_CRASHED` error and the worker is replaced; Node.js never goes down.
+- **Same options as Python:** `workers`, `timeout`, `maxQueue`, `maxCalls`, `maxMemory`, `healthInterval`, `cancelGrace`... plus `args`, `env` and `cwd` for the process.
+- **Contracts are declared in code**, with the same names as `@action` in Python (`summary`, `input`, `output`, `query`, `params`, `permissions`, `mcp`...). The binary prints them with `--describe`.
+- **Where Rust pays off.** Heavy CPU work that should not block Node.js and that can use several cores. For the longest Collatz chain below 3 million (the same algorithm in each language, eight cores): optimized JavaScript takes 1.2 s and Rust 0.33 s (3.6x; the naive JavaScript most people write is 14x slower than Rust), and pure Python is 48x slower than Rust. Eight of those jobs take 9.1 s in JavaScript, **blocking the event loop the whole time**, and 0.7 s on four Rust workers, which leave the event loop free (1 ms of delay). A call that does nothing costs 0.03 ms. For light work on small data, JavaScript in the same process wins: it pays no transfer.
+- **Windows:** the standard output is not redirected, so use `eprintln!` and not `println!` in a worker. Not tested there yet.
 
 ## Checking your setup
 

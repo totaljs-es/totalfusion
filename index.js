@@ -5,7 +5,8 @@ const { FusionStream } = require('./lib/stream');
 
 // Adapters are loaded only when their runtime is used
 const ADAPTERS = {
-	python: () => require('./python')
+	python: () => require('./python'),
+	rust: () => require('./rust')
 };
 
 class Fusion {
@@ -20,6 +21,8 @@ class Fusion {
 		this.call = this.call.bind(this);
 		this.python = this.python.bind(this);
 		this.python.stream = (fn, args, options) => this.stream('python', fn, args, options);
+		this.rust = this.rust.bind(this);
+		this.rust.stream = (fn, args, options) => this.stream('rust', fn, args, options);
 		this.describe = this.describe.bind(this);
 		this.warmup = this.warmup.bind(this);
 		this.doctor = this.doctor.bind(this);
@@ -100,6 +103,10 @@ class Fusion {
 
 	python(fn, args, options) {
 		return this.call('python', fn, args, options);
+	}
+
+	rust(fn, args, options) {
+		return this.call('rust', fn, args, options);
 	}
 
 	// Contracts declared with @action in the components of a runtime, read without running them

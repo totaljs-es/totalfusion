@@ -13,7 +13,11 @@
 		"bin",
 		"lib",
 		"python",
-		"total5"
+		"total5",
+		"rust/index.js",
+		"rust/Cargo.toml",
+		"rust/README.md",
+		"rust/src"
 	],
 	"scripts": {
 		"test": "node --test"

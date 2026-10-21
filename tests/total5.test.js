@@ -7,17 +7,7 @@ const Fs = require('fs');
 const Os = require('os');
 const { spawnSync } = require('child_process');
 
-// Total.js 5 comes from TOTAL5_PATH, the "total5" package or a sibling checkout (../framework5)
-function locate() {
-
-	const candidates = [process.env.TOTAL5_PATH, Path.join(__dirname, '..', '..', 'framework5')];
-
-	try {
-		candidates.push(Path.dirname(require.resolve('total5/package.json')));
-	} catch {}
-
-	return candidates.find(path => path && Fs.existsSync(Path.join(path, 'index.js')));
-}
+const locate = require('./locate-total5');
 
 const total5 = locate();
 
