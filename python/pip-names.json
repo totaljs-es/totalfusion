@@ -1,0 +1,16 @@
+{
+	"sklearn": "scikit-learn",
+	"cv2": "opencv-python",
+	"PIL": "Pillow",
+	"yaml": "PyYAML",
+	"bs4": "beautifulsoup4",
+	"dateutil": "python-dateutil",
+	"skimage": "scikit-image",
+	"serial": "pyserial",
+	"Crypto": "pycryptodome",
+	"attr": "attrs",
+	"dotenv": "python-dotenv",
+	"jwt": "PyJWT",
+	"magic": "python-magic",
+	"usb": "pyusb"
+}

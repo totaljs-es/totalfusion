@@ -11,6 +11,8 @@ import array
 import ast
 import asyncio
 import ctypes
+import importlib.metadata
+import importlib.util
 import importlib
 import inspect
 import json
@@ -274,6 +276,201 @@ def yields(node):
     return False
 
 
+# Import names that are not the name of the package that provides them (shared with Node.js)
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pip-names.json'), encoding='utf-8') as _names:
+    PIP_NAMES = json.load(_names)
+
+OPERATORS = re.compile(r'^\s*(===|==|~=|!=|>=|<=|>|<)\s*([A-Za-z0-9._*+!-]+)\s*$')
+
+
+def sources():
+    """The .py files of the components: (module, path)."""
+
+    for folder, dirs, files in os.walk(root):
+        dirs[:] = sorted(d for d in dirs if not d.startswith(('.', '_')) and d not in SKIP)
+        for file in sorted(files):
+            if file.endswith('.py') and not file.startswith('_'):
+                path = os.path.join(folder, file)
+                yield os.path.relpath(path, root)[:-3].replace(os.sep, '.'), path
+
+
+def catches_import_error(handler):
+    names = []
+    if handler.type is None:
+        return True
+    for item in (handler.type.elts if isinstance(handler.type, ast.Tuple) else [handler.type]):
+        names.append(item.id if isinstance(item, ast.Name) else getattr(item, 'attr', ''))
+    return any(name in ('ImportError', 'ModuleNotFoundError', 'Exception', 'BaseException') for name in names)
+
+
+def imports_of(tree):
+    """Top level names of every import, with True when the import is optional (inside try/except ImportError)."""
+
+    found = []
+
+    def visit(node, optional):
+
+        if isinstance(node, ast.Import):
+            found.extend((item.name.split('.')[0], optional) for item in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            found.append((node.module.split('.')[0], optional))
+
+        if isinstance(node, ast.Try):
+            guarded = optional or any(catches_import_error(handler) for handler in node.handlers)
+            for child in node.body:
+                visit(child, guarded)
+            for child in [c for h in node.handlers for c in h.body] + node.orelse + node.finalbody:
+                visit(child, optional)
+            return
+
+        for child in ast.iter_child_nodes(node):
+            visit(child, optional)
+
+    visit(tree, False)
+    return found
+
+
+def version_tuple(text):
+    numbers = re.findall(r'\d+', text.split('+')[0])
+    return tuple(int(n) for n in numbers[:4]) if numbers else None
+
+
+def satisfies(installed, spec):
+    """Best effort check of a version specifier. None when it cannot be decided."""
+
+    have = version_tuple(installed)
+    verdict = True
+
+    for part in filter(None, (p.strip() for p in spec.split(','))):
+
+        match = OPERATORS.match(part)
+
+        if not match or not have or '*' in match.group(2):
+            return None
+
+        operator, wanted = match.group(1), version_tuple(match.group(2))
+
+        if wanted is None or operator in ('~=', '==='):
+            return None
+
+        size = max(len(have), len(wanted))
+        a = have + (0,) * (size - len(have))
+        b = wanted + (0,) * (size - len(wanted))
+        ok = {'==': a == b, '!=': a != b, '>=': a >= b, '<=': a <= b, '>': a > b, '<': a < b}[operator]
+        verdict = verdict and ok
+
+    return verdict
+
+
+def installed_version(name):
+    for candidate in (name, name.replace('-', '_'), name.replace('_', '-'), name.replace('.', '-')):
+        try:
+            return importlib.metadata.version(candidate)
+        except importlib.metadata.PackageNotFoundError:
+            continue
+    return None
+
+
+def requirements(path):
+
+    items = []
+
+    with open(path, encoding='utf-8') as f:
+        lines = f.read().splitlines()
+
+    for raw in lines:
+
+        line = raw.split(' #', 1)[0].strip()
+
+        if not line or line.startswith('#'):
+            continue
+
+        if line.startswith('-') or '://' in line or ' @ ' in line:
+            items.append({'name': line, 'status': 'skipped', 'reason': 'an option or a URL is not checked'})
+            continue
+
+        requirement, _, marker = line.partition(';')
+        match = re.match(r'^([A-Za-z0-9][A-Za-z0-9._-]*)\s*(?:\[[^\]]*\])?\s*(.*)$', requirement.strip())
+
+        if not match:
+            continue
+
+        name, spec = match.group(1), match.group(2).strip().lstrip('(').rstrip(')')
+
+        if marker.strip():
+            items.append({'name': name, 'spec': spec, 'status': 'skipped', 'reason': 'it has an environment marker'})
+            continue
+
+        have = installed_version(name)
+
+        if have is None:
+            items.append({'name': name, 'spec': spec, 'status': 'missing'})
+        elif spec and satisfies(have, spec) is False:
+            items.append({'name': name, 'spec': spec, 'installed': have, 'status': 'version'})
+        else:
+            items.append({'name': name, 'spec': spec, 'installed': have, 'status': 'ok'})
+
+    return items
+
+
+def doctor(args):
+    """Looks at the components and at the environment without importing the components."""
+
+    report = {'executable': sys.executable, 'version': list(sys.version_info[:3]), 'prefix': sys.prefix, 'base_prefix': getattr(sys, 'base_prefix', sys.prefix), 'platform': sys.platform, 'memory': memory() is not None}
+
+    modules = 0
+    syntax = []
+    needed = {}
+
+    for module, path in sources():
+
+        modules += 1
+
+        try:
+            with open(path, encoding='utf-8') as f:
+                tree = ast.parse(f.read(), path)
+        except (SyntaxError, UnicodeDecodeError, ValueError) as e:
+            syntax.append({'module': module, 'message': '%s: %s' % (type(e).__name__, e)})
+            continue
+
+        for name, optional in imports_of(tree):
+            entry = needed.setdefault(name, {'name': name, 'files': [], 'optional': True})
+            entry['files'].append(module)
+            entry['optional'] = entry['optional'] and optional
+
+    imports = []
+
+    for name, entry in sorted(needed.items()):
+
+        # a module of the components or the SDK of TotalFusion
+        if name == 'totalfusion' or os.path.exists(os.path.join(root, name + '.py')) or os.path.isdir(os.path.join(root, name)):
+            continue
+
+        try:
+            found = importlib.util.find_spec(name) is not None
+        except (ImportError, ValueError, AttributeError):
+            found = False
+
+        if not found:
+            entry['pip'] = PIP_NAMES.get(name, name)
+            entry['files'] = sorted(set(entry['files']))
+            imports.append(entry)
+
+    report['modules'] = modules
+    report['syntax'] = syntax
+    report['missing'] = imports
+
+    # `--requirements file` or requirements.txt next to the components, or in the folder above
+    wanted = args[args.index('--requirements') + 1] if '--requirements' in args else None
+    candidates = [wanted] if wanted else [os.path.join(root, 'requirements.txt'), os.path.join(os.path.dirname(root), 'requirements.txt')]
+    path = next((c for c in candidates if c and os.path.isfile(c)), None)
+
+    report['requirements'] = {'file': path, 'items': requirements(path) if path else []}
+    report['contracts'] = describe()
+
+    return report
+
+
 def describe():
     """Reads the contracts declared with @action without importing anything (no side effects, no models loaded)."""
 
@@ -525,6 +722,11 @@ def main():
     args = sys.argv[1:]
     path = args[args.index('--path') + 1] if '--path' in args else os.getcwd()
     root = os.path.realpath(path)
+
+    if '--doctor' in args:
+        out.write(json.dumps(doctor(args)).encode('utf-8'))
+        out.flush()
+        os._exit(0)
 
     if '--describe' in args:
         out.write(json.dumps(describe()).encode('utf-8'))

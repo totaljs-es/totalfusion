@@ -49,6 +49,32 @@ What the test suite (104 tests) has been run against:
 
 Linux and Windows are not verified yet. The GitHub Actions workflow in [.github/workflows/test.yml](.github/workflows/test.yml) runs the suite on Linux, macOS and Windows with those Node.js and Python versions, but it has not run yet. On Windows the memory of a worker is not reported, so `maxMemory` has no effect there.
 
+## Checking your setup
+
+Before running anything, ask TotalFusion what is wrong:
+
+```bash
+npx totalfusion doctor --path ./python --venv ./.venv
+```
+
+```
+TotalFusion doctor: python
+
+[ok]    Interpreter  Python 3.12.15 (/project/.venv/bin/python, chosen by the venv option)
+[ok]    Environment  Virtual environment /project/.venv
+[ok]    Components   3 modules in /project/python, 2 actions (1 streaming)
+[error] Libraries    Not installed: sklearn (pip: scikit-learn) used by classifier; torch used by sentiment
+                     Fix: /project/.venv/bin/python -m pip install scikit-learn torch
+
+1 problem to fix
+```
+
+The same from code: `const report = await fusion.doctor('python')` gives `report.ok`, `report.checks` (each with `status`, `name`, `message` and, when there is something to do, `fix`) and `report.text`. The command exits with `0` when everything is in order (warnings are advice), `1` when something has to be fixed and `2` for a wrong usage; `--json` prints the report as JSON. Options: `--path`, `--venv`, `--python`, `--requirements`, `--preload a,b`, `--max-memory 2gb`.
+
+It looks at the interpreter (version, where it was chosen from, virtual environment or system Python), the components (syntax errors, contracts that cannot be read, `preload` modules that do not exist), the libraries they import and `requirements.txt`. **Nothing is imported, run or installed**: the components are read as text, so a module that loads a model on import is no problem. Imports inside functions are found too, and an import guarded by `try/except ImportError` is only a warning. The libraries are looked up with the same interpreter that will run the workers, which is the point: installing a library in another Python is the most common mistake. For `requirements.txt` (next to the components, in the folder above, or the `requirements` option) it checks what is installed and the version specifiers (`==`, `>=`, `<`, ...); lines with environment markers, URLs and options such as `-r` are not checked.
+
+The same hint reaches the errors at run time. A call that fails with `ModuleNotFoundError`, or a worker that cannot start because of a missing library, carries `err.hint` (and it is appended to the stack): `"numpy" is not installed in the Python that runs the workers (/project/.venv/bin/python). Install it with: /project/.venv/bin/python -m pip install numpy`. Names that differ from the package (`sklearn` is `scikit-learn`, `cv2` is `opencv-python`, `PIL` is `Pillow`, ...) are translated.
+
 ## Usage
 
 ```js
@@ -261,7 +287,7 @@ Every error is a `FusionError` with a stable `code`.
 | `QUEUE_FULL` | The bounded queue is full: backpressure instead of unbounded memory growth. |
 | `NOT_FOUND` | Unknown module or function (or not exposed). |
 | `NOT_SERIALIZABLE` / `ENCODE_ERROR` | The result / the arguments are not valid JSON. |
-| `SPAWN_FAILED` / `START_FAILED` | The interpreter was not found or the worker cannot start. |
+| `SPAWN_FAILED` / `START_FAILED` | The interpreter was not found or the worker cannot start. `err.hint` says how to install a missing library. |
 | `CLOSED` | The pool was shut down while the call was pending. |
 
 ### Cancellation

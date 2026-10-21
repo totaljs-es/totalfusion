@@ -22,6 +22,7 @@ class Fusion {
 		this.python.stream = (fn, args, options) => this.stream('python', fn, args, options);
 		this.describe = this.describe.bind(this);
 		this.warmup = this.warmup.bind(this);
+		this.doctor = this.doctor.bind(this);
 		this.register = this.register.bind(this);
 		this.stream = this.stream.bind(this);
 		this.sse = this.sse.bind(this);
@@ -109,6 +110,23 @@ class Fusion {
 
 		try {
 			return ADAPTERS[runtime]().describe(this.config[runtime] || {});
+		} catch (err) {
+			return Promise.reject(err);
+		}
+	}
+
+	// Checks the interpreter, the components and the libraries before anything runs. Nothing is imported or installed.
+	//   const report = await fusion.doctor('python');   report.ok, report.checks, report.text
+	doctor(runtime) {
+
+		if (!runtime)
+			runtime = 'python';
+
+		if (!ADAPTERS[runtime])
+			return Promise.reject(new FusionError('NOT_FOUND', 'Unknown runtime "' + runtime + '"'));
+
+		try {
+			return ADAPTERS[runtime]().doctor(this.config[runtime] || {});
 		} catch (err) {
 			return Promise.reject(err);
 		}

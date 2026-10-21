@@ -10,11 +10,15 @@
 	},
 	"files": [
 		"index.js",
+		"bin",
 		"lib",
 		"python",
 		"total5"
 	],
 	"scripts": {
 		"test": "node --test"
+	},
+	"bin": {
+		"totalfusion": "bin/totalfusion.js"
 	}
 }

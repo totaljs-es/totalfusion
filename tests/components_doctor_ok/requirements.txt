@@ -1,0 +1,2 @@
+# only things that are installed everywhere
+pip>=0.1
