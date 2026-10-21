@@ -139,7 +139,7 @@ exports.register = async function(options) {
 						args.params = $.params;
 				}
 
-				fusion.call(runtime, item.fn, args, { timeout: meta.timeout }).then(function(result) {
+				fusion.call(runtime, item.fn, args, { timeout: meta.timeout, idempotent: meta.idempotent === true }).then(function(result) {
 					$.callback(result);
 				}, function(err) {
 					onerror(err, id);

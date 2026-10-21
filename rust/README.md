@@ -47,13 +47,13 @@ NaN and infinity cannot be sent (JSON has no such numbers): the call fails with 
 
 ## Total.js
 
-The methods that describe a function apply to the function registered just before them: `summary`, `input`, `output`, `query`, `params` (the schema syntax of Total.js, `*` means required), `permissions`, `user`, `sa`, `su`, `timeout`, `id` and `mcp`. A function that declares any of them, or calls `.action()`, becomes an action of Total.js with `fusion.register({ runtime: 'rust', rust: { binary } })`; the others stay callable from JavaScript but private. `mcp(true)` also exposes it to AI agents.
+The methods that describe a function apply to the function registered just before them: `summary`, `input`, `output`, `query`, `params` (the schema syntax of Total.js, `*` means required), `permissions`, `user`, `sa`, `su`, `timeout`, `idempotent` (the call may be repeated on another worker if this one dies), `id` and `mcp`. A function that declares any of them, or calls `.action()`, becomes an action of Total.js with `fusion.register({ runtime: 'rust', rust: { binary } })`; the others stay callable from JavaScript but private. `mcp(true)` also exposes it to AI agents.
 
 `./worker --describe` prints the contracts as JSON. This is what `register()` and `fusion.doctor('rust')` read, so nothing runs to learn them.
 
 ## Do not print to the standard output
 
-It carries the protocol. On Unix the crate redirects it to the error output for you, so `println!` is harmless there, but use `eprintln!` to be safe everywhere (on Windows the standard output is not redirected).
+It carries the protocol. On Unix and on Windows the crate redirects it to the error output for you, so `println!` is harmless, but use `eprintln!` to be safe everywhere. (The Windows code compiles but has not been run on Windows yet.)
 
 ## Requirements
 

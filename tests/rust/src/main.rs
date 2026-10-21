@@ -12,6 +12,14 @@ fn number(call: &Call, key: &str) -> Result<f64, Error> {
     call.args[key].as_f64().ok_or_else(|| Error::invalid(format!("{} must be a number", key)))
 }
 
+fn attempt(call: &Call) -> Result<u64, Error> {
+    use std::io::Write;
+
+    let path = call.args["marker"].as_str().ok_or_else(|| Error::invalid("marker must be a string"))?;
+    fs::OpenOptions::new().create(true).append(true).open(path)?.write_all(b"x")?;
+    Ok(fs::metadata(path)?.len())
+}
+
 fn main() {
     App::new()
         .function("math.add", |call: &Call| Ok(object! { "sum" => number(call, "a")? + number(call, "b")? }))
@@ -159,6 +167,18 @@ fn main() {
         .action()
         .function("actions.rejects", |_call: &Call| -> Result<Value, Error> { Err(Error::invalid("the value is not acceptable")) })
         .action()
+        // each attempt leaves a byte in a file, even if the process dies
+        .function("flaky.crash_first", |call: &Call| {
+            if attempt(call)? == 1 {
+                std::process::exit(3);
+            }
+            Ok("ok".into())
+        })
+        .function("flaky.crash_always", |call: &Call| -> Result<Value, Error> {
+            attempt(call)?;
+            std::process::exit(3)
+        })
+        .function("flaky.counted", |call: &Call| Ok(fs::metadata(call.args["marker"].as_str().unwrap_or("")).map(|meta| meta.len()).unwrap_or(0).into()))
         .function("single", |_call: &Call| Ok("single".into()))
         .action()
         .on_shutdown(|| {

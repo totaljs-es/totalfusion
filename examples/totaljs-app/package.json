@@ -1,0 +1,12 @@
+{
+	"name": "totalfusion-example",
+	"private": true,
+	"description": "A Total.js 5 application that uses Python through TotalFusion",
+	"scripts": {
+		"start": "node index.js"
+	},
+	"dependencies": {
+		"total5": "latest",
+		"totalfusion": "file:../.."
+	}
+}

@@ -154,7 +154,7 @@ exports.doctor = async function(config) {
 	for (const warning of require('../total5').lint ? found.actions.flatMap(item => require('../total5').lint(item.fn, item.meta)) : [])
 		report.add('warn', 'Contract', warning.id + ': ' + warning.message);
 
-	if (config.maxMemory && !['linux', 'darwin'].includes(process.platform))
+	if (config.maxMemory && !['linux', 'darwin', 'win32'].includes(process.platform))
 		report.add('warn', 'Memory', 'This system does not report the memory of a process: maxMemory will have no effect');
 
 	return report;

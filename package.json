@@ -44,7 +44,9 @@
 		"rust/Cargo.toml",
 		"rust/README.md",
 		"rust/src",
-		"CHANGELOG.md"
+		"CHANGELOG.md",
+		"!**/__pycache__",
+		"!**/*.pyc"
 	],
 	"scripts": {
 		"test": "node --test",

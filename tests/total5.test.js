@@ -21,7 +21,7 @@ test('registers @action functions as Total.js 5 actions and MCP tools', { skip: 
 
 	const report = JSON.parse(result.stdout.toString().trim().split('\n').pop());
 
-	assert.deepEqual(report.registered.ids.sort(), ['contract/bare', 'contract/count', 'contract/double', 'contract/explode', 'contract/members', 'contract/only_query', 'contract/reject', 'contract/restricted', 'contract/sections', 'slow/add_one']);
+	assert.deepEqual(report.registered.ids.sort(), ['contract/bare', 'contract/count', 'contract/double', 'contract/explode', 'contract/members', 'contract/only_query', 'contract/reject', 'contract/restricted', 'contract/sections', 'flaky/contract_flaky', 'slow/add_one']);
 	assert.deepEqual(report.registered.errors, []);
 	// A generator is a stream, not an action: it is skipped with a warning
 	assert.equal(report.registered.warnings.length, 1);
@@ -41,6 +41,10 @@ test('registers @action functions as Total.js 5 actions and MCP tools', { skip: 
 	assert.deepEqual(report.reject, { ok: false, errors: [{ error: 'value is not acceptable' }] });
 	assert.deepEqual(report.explode, { ok: false, errors: [{ error: 'The action failed' }] });
 	assert.equal(report.logged, 'REMOTE_ERROR');
+
+	// a function that says idempotent=True is repeated on another worker when its worker dies
+	assert.deepEqual(report.flaky, { ok: true, output: 'ok' });
+	assert.equal(report.flakyAttempts, 2);
 
 	// query and params arrive in Python validated and converted by the contract, next to the input
 	assert.deepEqual(report.sections.result, { ok: true, output: { input: { a: 5 }, query: { page: 2, term: 'x' }, params: { id: report.sections.id } } });

@@ -154,3 +154,7 @@ vite.config.ts.timestamp-*
 # Rust build output
 target/
 rust/Cargo.lock
+
+# Python bytecode, written next to the code when it runs
+__pycache__/
+*.pyc

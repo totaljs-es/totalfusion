@@ -41,7 +41,26 @@ test('everything the code needs is in the package', function() {
 
 test('the package does not ship tests, examples or build output', function() {
 	const files = pack();
-	assert.deepEqual(files.filter(file => /^(tests|examples|\.github)\/|target\/|node_modules\/|Cargo\.lock$/.test(file)), []);
+	assert.deepEqual(files.filter(file => /^(tests|examples|\.github)\/|target\/|node_modules\/|__pycache__\/|\.pyc$|Cargo\.lock$/.test(file)), []);
+});
+
+test('Python bytecode that is lying around does not get into the package', function() {
+
+	// Running a worker by hand leaves __pycache__ next to the code, and npm ignores .gitignore for the folders it is told to pack
+	const directories = [Path.join(ROOT, 'python', '__pycache__'), Path.join(ROOT, 'python', 'sdk', '__pycache__')];
+
+	try {
+		for (const directory of directories) {
+			Fs.mkdirSync(directory, { recursive: true });
+			Fs.writeFileSync(Path.join(directory, 'stray.cpython-315.pyc'), 'x');
+		}
+
+		assert.deepEqual(pack().filter(file => /__pycache__|\.pyc$/.test(file)), []);
+
+	} finally {
+		for (const directory of directories)
+			Fs.rmSync(directory, { recursive: true, force: true });
+	}
 });
 
 test('the version of the package and of the crate are the same', function() {

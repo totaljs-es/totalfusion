@@ -57,6 +57,13 @@ function run(id, input, options) {
 	report.sectionsBadId = await run('contract/sections', { a: '5' }, { query: { page: '1' }, params: { id: 'not an id' } });
 	report.onlyQuery = await run('contract/only_query', null, { query: { limit: '10' } });
 
+	// idempotent=True in the contract: the call is repeated when the worker dies
+	const marker = require('path').join(require('os').tmpdir(), 'totalfusion-t5-flaky-' + process.pid);
+	require('fs').rmSync(marker, { force: true });
+	report.flaky = await run('flaky/contract_flaky', { marker });
+	report.flakyAttempts = require('fs').statSync(marker).size;
+	require('fs').rmSync(marker, { force: true });
+
 	// who may call: the framework checks it before Python is reached
 	report.restricted = {
 		reader: await run('contract/restricted', { x: 1 }, { user: { permissions: ['reader'] } }),

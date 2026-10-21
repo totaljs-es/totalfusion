@@ -37,10 +37,19 @@ SKIP = ('node_modules', 'venv', 'site-packages')
 
 # The real stdout is reserved for the protocol. Everything that prints
 # (including C extensions writing to fd 1) goes to stderr instead.
-out = os.fdopen(os.dup(1), 'wb')
+out_fd = os.dup(1)
+in_fd = os.dup(0)
+
+# On Windows a descriptor translates line endings unless it is binary: a frame would be corrupted
+if sys.platform == 'win32':
+    import msvcrt
+    msvcrt.setmode(out_fd, os.O_BINARY)
+    msvcrt.setmode(in_fd, os.O_BINARY)
+
+out = os.fdopen(out_fd, 'wb')
 os.dup2(2, 1)
 sys.stdout = sys.stderr
-inp = os.fdopen(os.dup(0), 'rb')
+inp = os.fdopen(in_fd, 'rb')
 os.dup2(os.open(os.devnull, os.O_RDONLY), 0)
 
 root = ''
@@ -89,13 +98,27 @@ def memory():
     """Memory of this process in bytes, or None when the platform does not allow to know it.
 
     Linux: resident set size. macOS: physical footprint (the number Activity Monitor shows, it includes
-    compressed memory, which `ps` leaves out). Other systems: unknown.
+    compressed memory, which `ps` leaves out). Windows: the private bytes of the process. Other systems: unknown.
     """
 
     try:
         if sys.platform.startswith('linux'):
             with open('/proc/self/statm') as f:
                 return int(f.read().split()[1]) * os.sysconf('SC_PAGE_SIZE')
+
+        if sys.platform == 'win32':
+            # PROCESS_MEMORY_COUNTERS_EX: PrivateUsage is the memory that only this process uses (what Task Manager calls "Memory")
+            class Counters(ctypes.Structure):
+                _fields_ = [('cb', ctypes.c_ulong), ('PageFaultCount', ctypes.c_ulong)] + [(name, ctypes.c_size_t) for name in ('PeakWorkingSetSize', 'WorkingSetSize', 'QuotaPeakPagedPoolUsage', 'QuotaPagedPoolUsage', 'QuotaPeakNonPagedPoolUsage', 'QuotaNonPagedPoolUsage', 'PagefileUsage', 'PeakPagefileUsage', 'PrivateUsage')]
+
+            counters = Counters()
+            counters.cb = ctypes.sizeof(counters)
+            kernel32 = ctypes.WinDLL('kernel32')
+            kernel32.GetCurrentProcess.restype = ctypes.c_void_p
+            kernel32.K32GetProcessMemoryInfo.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_ulong]
+
+            if kernel32.K32GetProcessMemoryInfo(kernel32.GetCurrentProcess(), ctypes.byref(counters), counters.cb):
+                return int(counters.PrivateUsage)
 
         if sys.platform == 'darwin':
             # struct rusage_info_v0: the physical footprint is the 10th 64 bits field
@@ -214,7 +237,7 @@ async def import_module(loop, name):
 
     file = getattr(module, '__file__', None)
 
-    if not file or not os.path.realpath(file).startswith(root + os.sep):
+    if not file or not os.path.normcase(os.path.realpath(file)).startswith(os.path.normcase(root) + os.sep):
         raise LookupError('Module "%s" is not a component of %s' % (name, root))
 
     for fn in hooks(module, '__fusion_startup__'):

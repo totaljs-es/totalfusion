@@ -136,7 +136,7 @@ describe('recycling by memory', function() {
 		assert.equal(await fusion.python('health.held'), 0);
 	});
 
-	test('the memory of every worker is reported', { skip: ['darwin', 'linux'].includes(process.platform) ? false : 'memory is not reported on this platform' }, async function() {
+	test('the memory of every worker is reported', { skip: ['darwin', 'linux', 'win32'].includes(process.platform) ? false : 'memory is not reported on this platform' }, async function() {
 		const fusion = create();
 		await fusion.python('health.pid');
 		const worker = fusion.stats().python.details[0];

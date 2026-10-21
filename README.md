@@ -36,9 +36,21 @@ npm install totalfusion
 
 Add it to your Total.js 5 project. It requires Node.js 20+ and Python 3.9+ already installed. TotalFusion never installs anything on your system. The worker uses only the Python standard library.
 
+## Examples
+
+All of them run from a clone of the repository:
+
+| | |
+|---|---|
+| [examples/totaljs-app](examples/totaljs-app) | A Total.js 5 application with Python: actions, an API route, Server-Sent Events and reload on edit. `npm install && npm start`. |
+| [examples/basic.js](examples/basic.js) | `fusion.python()` in any Node.js program. |
+| [examples/streaming.js](examples/streaming.js) | A Python generator as an async iterable, and cancelling it. |
+| [examples/rust.js](examples/rust.js) | The Rust worker of [examples/rust](examples/rust) (build it first with `cargo build --release`). |
+| [examples/components](examples/components) | Components that use scikit-learn, NumPy and PyTorch (they need those libraries in your Python). |
+
 ## Compatibility
 
-What the test suite (more than 200 tests, 150 of them without Rust) has been run against:
+What the test suite (more than 230 tests, more than 170 of them without Rust) has been run against:
 
 | | Verified |
 |---|---|
@@ -48,7 +60,7 @@ What the test suite (more than 200 tests, 150 of them without Rust) has been run
 | Rust | 1.99 (the `totalfusion` crate and its worker) |
 | Operating system | macOS on Apple silicon |
 
-Linux and Windows are not verified yet. The GitHub Actions workflow in [.github/workflows/test.yml](.github/workflows/test.yml) runs the suite on Linux, macOS and Windows with those Node.js and Python versions, but it has not run yet. On Windows the memory of a worker is not reported, so `maxMemory` has no effect there.
+Linux and Windows are **not verified yet**. The code for them is written (binary pipes and memory of a worker on Windows, in Python and in Rust) and the Rust crate compiles for `x86_64-pc-windows-msvc` and `x86_64-unknown-linux-gnu`, but it has not been run there. The GitHub Actions workflow in [.github/workflows/test.yml](.github/workflows/test.yml) runs the suite on Linux, macOS and Windows with those Node.js and Python versions, but it has not run yet.
 
 ## Usage
 
@@ -104,6 +116,8 @@ The options of `fusion.configure({ python: {...} })` and `fusion.configure({ rus
 | `args` | Rust | none | Arguments for the worker. |
 | `cwd` | Rust | folder of the binary | Working directory of the worker. |
 
+Options of a single call (`fusion.python(fn, args, options)`): `timeout`, `signal` (an `AbortSignal`), `idempotent` and `retries` (see [Retrying](#retrying-a-call-that-can-be-repeated)), and for a stream `highWaterMark`.
+
 The methods: `fusion.python(fn, args, options)` and `fusion.rust(...)` (or `fusion.call(runtime, fn, args, options)`), `fusion.stream(...)` and `fusion.python.stream(...)` / `fusion.rust.stream(...)`, `fusion.describe(runtime)`, `fusion.warmup(runtime)`, `fusion.watch(runtime)`, `fusion.doctor(runtime)`, `fusion.register(options)` and `fusion.sse($, stream)` for Total.js, `fusion.stats()` and `fusion.shutdown()`.
 
 ### Writing components
@@ -136,7 +150,7 @@ def classify(data):
     return { 'label': model.predict(data['text']) }
 ```
 
-`@action` declares the contract: `summary`, `input`, `output`, `query`, `params` (Total.js schema syntax), `mcp`, `permissions`, `user`, `sa`, `su`, `timeout` and `name`/`id`. Its arguments are read **statically** (they must be literals), so `fusion.describe('python')` lists every contract without importing your code and without loading any model.
+`@action` declares the contract: `summary`, `input`, `output`, `query`, `params` (Total.js schema syntax), `mcp`, `permissions`, `user`, `sa`, `su`, `idempotent`, `timeout` and `name`/`id`. Its arguments are read **statically** (they must be literals), so `fusion.describe('python')` lists every contract without importing your code and without loading any model.
 
 `@startup` and `@shutdown` can be `def` or `async def`. To load a model **before** the worker reports ready (so the first call is not slow), name the module in `preload`: `fusion.configure({ python: { preload: ['classifier'] } })`. A module that cannot be preloaded fails the start with the real traceback in `err.stderr`.
 
@@ -298,7 +312,7 @@ Libraries for machine learning tend to leak memory, and a process can get stuck.
 
 With the DistilBERT worker of 1.35 GB and `maxCalls: 100`, 450 calls were served with two replacements: the slowest call took 32 ms (no stall while a new worker loaded the model), the pool peaked at 2.7 GB with both workers alive and went back to 1.35 GB. The median rose from 5-7 ms to 16 ms while a worker was loading, because both compete for the CPU.
 
-Memory is the resident size on Linux and the physical footprint on macOS (the value Activity Monitor shows, compressed memory included). On other systems it is not reported, `maxMemory` has no effect and Node.js emits a warning.
+Memory is the resident size on Linux, the physical footprint on macOS (the value Activity Monitor shows, compressed memory included) and the private bytes on Windows (not verified there). On other systems it is not reported, `maxMemory` has no effect and Node.js emits a warning.
 
 **Health check.** Every `healthInterval` (10 s by default) idle workers get a ping. One that does not answer within `healthTimeout` (10 s) is killed and replaced at once, so the next call does not wait for a model to load. Only idle workers are checked: a busy worker is protected by the `timeout` of its call, and a long computation that holds the GIL is never mistaken for a dead worker.
 
@@ -311,6 +325,40 @@ fusion.stats().python
 //   details: [{ pid: 67025, ready: true, busy: false, running: 0, calls: 32, memory: 1417674752, age: 6120, recycling: false }] }
 ```
 
+### Observing the workers
+
+`fusion` is an `EventEmitter`. Use it for logs and metrics; every event carries the `runtime` it is about.
+
+```js
+fusion.on('worker:exit', e => log.warn('worker', e.pid, 'ended:', e.reason));
+```
+
+| Event | When | Data |
+|---|---|---|
+| `worker:ready` | A worker is ready to take calls. | `pid`, `startedIn` (ms) |
+| `worker:exit` | A worker ended. | `pid`, `code`, `signal`, `running` (calls it had), `calls`, and `reason`: `crash`, `recycled` (replaced on purpose), `unresponsive`, `start-failed` or `shutdown` |
+| `worker:recycle` | A worker is going to be replaced. | `pid`, `reason` (`calls`, `memory` or `reload`), `memory`, `calls` |
+| `worker:unresponsive` | An idle worker did not answer the health check. | `pid`, `timeout` |
+| `call:retry` | A call that was declared idempotent is going to run again. | `fn`, `attempt`, `retries`, `pid` of the worker that died |
+| `reload` | The code changed and the workers are being replaced. | `files`, `replaced` |
+
+A listener that throws does not break the pool: Node.js emits a warning.
+
+### Retrying a call that can be repeated
+
+A call is **never repeated by itself**: if its worker dies it may have done part of its work, and repeating it could do it twice. If you know it is harmless to run it again (a calculation, a query, a conversion), say so and a worker that dies does not fail the call:
+
+```js
+await fusion.python('prices.convert', data, { idempotent: true });                 // one more try
+await fusion.python('prices.convert', data, { idempotent: true, retries: 3 });
+```
+
+```python
+@action(summary='Converts a price', input='*amount:Number', idempotent=True)       # in the contract: Total.js does it for every call
+```
+
+In Rust, `.idempotent(true)` after the function. The call runs again on another worker, first in the queue, up to `retries` times (default 1); then it fails with `WORKER_CRASHED` as usual. This is what saves the calls that were running next to a call that had to be killed (see [Several calls at the same time](#several-calls-at-the-same-time)). It does **not** repeat a call that timed out, one that failed with an error of its own, a stream, or anything while the pool shuts down, and a function that kills its worker every time costs `retries + 1` workers, no more. The timeout counts for every attempt.
+
 ### Errors
 
 Every error is a `FusionError` with a stable `code`.
@@ -321,7 +369,7 @@ Every error is a `FusionError` with a stable `code`.
 | `TIMEOUT` / `ABORTED` | The call exceeded its timeout or its `AbortSignal` fired. |
 | `STREAMING_FUNCTION` | A generator was called with `fusion.python()`: use `fusion.stream()`. |
 | `CANCELLED` | The stream was cancelled by its consumer. |
-| `WORKER_CRASHED` | The worker died during the call. The call is **not** retried, because it may have had side effects. The worker is replaced. |
+| `WORKER_CRASHED` | The worker died during the call. The call is **not** retried, because it may have had side effects, unless it was declared idempotent. The worker is replaced. |
 | `QUEUE_FULL` | The bounded queue is full: backpressure instead of unbounded memory growth. |
 | `NOT_FOUND` | Unknown module or function (or not exposed). |
 | `NOT_SERIALIZABLE` / `ENCODE_ERROR` | The result / the arguments are not valid JSON. |
@@ -384,7 +432,7 @@ The guide of the crate, with the whole API, is in [rust/README.md](rust/README.m
 - **Same options as Python:** `workers`, `concurrency`, `timeout`, `maxQueue`, `maxCalls`, `maxMemory`, `healthInterval`, `cancelGrace`... plus `args`, `env` and `cwd` for the process. Every call of a worker runs in its own thread, so `concurrency` makes one process use all the cores (see [Several calls at the same time](#several-calls-at-the-same-time)).
 - **Contracts are declared in code**, with the same names as `@action` in Python (`summary`, `input`, `output`, `query`, `params`, `permissions`, `mcp`...). The binary prints them with `--describe`.
 - **Where Rust pays off.** Heavy CPU work that should not block Node.js and that can use several cores. For the longest Collatz chain below 3 million (the same algorithm in each language, eight cores): optimized JavaScript takes 1.2 s and Rust 0.33 s (3.6x; the naive JavaScript most people write is 14x slower than Rust), and pure Python is 48x slower than Rust. Eight of those jobs take 9.1 s in JavaScript, **blocking the event loop the whole time**, and 0.7 s on four Rust workers, which leave the event loop free (1 ms of delay). A call that does nothing costs 0.03 ms. For light work on small data, JavaScript in the same process wins: it pays no transfer.
-- **Windows:** the standard output is not redirected, so use `eprintln!` and not `println!` in a worker. Not tested there yet.
+- **Windows:** the SDK points the standard output of the process to the error output, as it does on Unix, so `println!` is harmless. That code compiles for Windows but has not been run there.
 
 ## Development: reload when the code changes
 

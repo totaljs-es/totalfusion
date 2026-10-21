@@ -1,5 +1,6 @@
 'use strict';
 
+const { EventEmitter } = require('events');
 const { FusionError } = require('./lib/errors');
 const { FusionStream } = require('./lib/stream');
 const { watch } = require('./lib/watch');
@@ -10,9 +11,11 @@ const ADAPTERS = {
 	rust: () => require('./rust')
 };
 
-class Fusion {
+class Fusion extends EventEmitter {
 
 	constructor(config) {
+
+		super();
 
 		this.config = {};
 		this.pools = new Map();
@@ -99,6 +102,15 @@ class Fusion {
 
 			pool = ADAPTERS[runtime]().create(this.config[runtime] || {});
 			this.pools.set(runtime, pool);
+
+			// What happens to the workers, for logs and metrics. A listener that fails must not break the pool.
+			pool.emit = (name, data) => {
+				try {
+					this.emit(name, Object.assign({ runtime }, data));
+				} catch (err) {
+					process.emitWarning('A listener of "' + name + '" threw: ' + (err && err.message), 'TotalFusionWarning');
+				}
+			};
 		}
 
 		return pool;
@@ -146,6 +158,8 @@ class Fusion {
 
 			if (options.log !== false)
 				console.log('[totalfusion] ' + runtime + ': ' + files.join(', ') + ' changed, ' + (replaced ? 'replacing ' + replaced + (replaced === 1 ? ' worker' : ' workers') : 'the next call starts with the new code'));
+
+			this.emit('reload', { runtime, files, replaced });
 
 			if (options.onreload)
 				options.onreload({ runtime, files, replaced });

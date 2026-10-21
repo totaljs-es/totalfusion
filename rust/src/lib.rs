@@ -23,8 +23,8 @@
 //! const result = await fusion.rust('text.length', { text: 'Hello' });   // { length: 5 }
 //! ```
 //!
-//! Do not print to the standard output of a worker: it carries the protocol. On Unix the SDK redirects it to the error
-//! output for you; use `eprintln!` to be safe everywhere.
+//! Do not print to the standard output of a worker: it carries the protocol. On Unix and on Windows the SDK redirects it to the
+//! error output for you; use `eprintln!` to be safe everywhere.
 
 mod app;
 mod error;

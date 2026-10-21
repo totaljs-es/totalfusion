@@ -84,7 +84,7 @@ describe('calls', { skip }, function() {
 		assert.ok(worker.pid > 0);
 		assert.equal(worker.calls, 1);
 
-		if (['linux', 'darwin'].includes(process.platform))
+		if (['linux', 'darwin', 'win32'].includes(process.platform))
 			assert.ok(worker.memory > 100 * 1024, 'memory: ' + worker.memory);
 	});
 
@@ -348,7 +348,7 @@ describe('workers', { skip }, function() {
 		assert.ok(fusion.stats().rust.recycled.calls >= 1);
 	});
 
-	test('a worker that grows over maxMemory is replaced', { skip: ['linux', 'darwin'].includes(process.platform) ? false : 'memory is not reported here' }, async function() {
+	test('a worker that grows over maxMemory is replaced', { skip: ['linux', 'darwin', 'win32'].includes(process.platform) ? false : 'memory is not reported here' }, async function() {
 		const fusion = create({ maxMemory: '100mb' });
 		const first = await fusion.rust('pid');
 		assert.equal(await fusion.rust('leak', { mb: 150 }), 1);

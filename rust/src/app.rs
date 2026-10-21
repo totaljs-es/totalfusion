@@ -151,6 +151,11 @@ impl App {
         self.set("su", value.into())
     }
 
+    /// The function can be repeated with no harm: if its worker dies, Total.js repeats the call on another one (once).
+    pub fn idempotent(self, value: bool) -> App {
+        self.set("idempotent", value.into())
+    }
+
     /// Longest time of a call, in milliseconds.
     pub fn timeout(self, milliseconds: u64) -> App {
         self.set("timeout", milliseconds.into())
@@ -427,8 +432,36 @@ fn protocol_output() -> Box<dyn Write + Send> {
     }
 }
 
-/// On Windows the standard output is not redirected: do not print to it (use `eprintln!`).
-#[cfg(not(unix))]
+/// On Windows the handle of the standard output is taken for the protocol, and the standard output of the process is pointed
+/// to the error output, so what prints (println!, a library) goes there and never breaks a frame.
+#[cfg(windows)]
+fn protocol_output() -> Box<dyn Write + Send> {
+    use std::os::windows::io::FromRawHandle;
+
+    extern "system" {
+        fn GetStdHandle(id: u32) -> *mut std::ffi::c_void;
+        fn SetStdHandle(id: u32, handle: *mut std::ffi::c_void) -> i32;
+    }
+
+    const STD_OUTPUT_HANDLE: u32 = -11i32 as u32;
+    const STD_ERROR_HANDLE: u32 = -12i32 as u32;
+
+    unsafe {
+        let protocol = GetStdHandle(STD_OUTPUT_HANDLE);
+        let errors = GetStdHandle(STD_ERROR_HANDLE);
+
+        // Without a usable handle there is nothing to protect: fall back to the standard output
+        if protocol.is_null() || protocol as isize == -1 || errors.is_null() || errors as isize == -1 {
+            return Box::new(io::stdout());
+        }
+
+        SetStdHandle(STD_OUTPUT_HANDLE, errors);
+        Box::new(std::fs::File::from_raw_handle(protocol))
+    }
+}
+
+/// On other systems the standard output is not redirected: use `eprintln!` and not `println!`.
+#[cfg(not(any(unix, windows)))]
 fn protocol_output() -> Box<dyn Write + Send> {
     Box::new(io::stdout())
 }
