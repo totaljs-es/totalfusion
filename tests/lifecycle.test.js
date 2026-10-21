@@ -3,6 +3,7 @@
 const { test, describe, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const Path = require('path');
+const { spawnSync } = require('child_process');
 const { Fusion } = require('..');
 
 const PATH = Path.join(__dirname, 'components');
@@ -206,6 +207,13 @@ describe('health', function() {
 
 		const pid = await fusion.python('health.pid');
 		assert.notEqual(pid, dying);
+	});
+
+	test('a call waiting for the replacement of a killed idle worker keeps the process alive', function() {
+
+		// Alone in a process: the test runner would keep it alive and hide the problem
+		const result = spawnSync(process.execPath, [Path.join(__dirname, 'killed-script.js')], { encoding: 'utf8', timeout: 30000 });
+		assert.equal(result.stdout.trim(), 'OK', result.stdout + result.stderr);
 	});
 
 	test('a healthy idle worker is left alone', async function() {
