@@ -1,20 +1,32 @@
 # TotalFusion
 
-Persistent, supervised workers for Node.js. Call functions written in other languages as plain `async` functions. Python is the first runtime.
-
-```js
-const fusion = require('totalfusion');
-
-const result = await fusion.python('analyzer.analyze', { text: 'Hello world' });
-```
+**Extends the capabilities of Total.js with other runtimes.** Python is the first one: bring machine learning, scientific computing and any Python library into a Total.js application as ordinary Actions, API endpoints and MCP tools, without leaving JavaScript.
 
 ```python
-# python/analyzer.py
+# python/sentiment.py
+from totalfusion import action
+
+@action(summary='Detects the sentiment of a text', input='*text:String', output='label:String', mcp=True)
 def analyze(data):
-    return { 'success': True, 'result': len(data['text']) }
+    return { 'label': 'POSITIVE' if 'love' in data['text'] else 'NEGATIVE' }
 ```
 
-No process management, no IPC, no serialization code: a pool of long-lived workers, correlated calls, timeouts, cancellation and real Python tracebacks in your JavaScript errors.
+```js
+// Total.js application
+const { register } = require('totalfusion/total5');
+
+await register({ python: { path: PATH.root('python') } });
+
+// 'sentiment/analyze' is now a Total.js action: ACTION(), API routes and an MCP tool for AI agents
+```
+
+Total.js validates the input with the contract before Python runs, and the same function can be called from your own code:
+
+```js
+const result = await ACTION('sentiment/analyze', { text: 'I love it' }).promise();
+```
+
+Under the hood there is a pool of long-lived worker processes, correlated calls, timeouts, cancellation and real Python tracebacks in your JavaScript errors. That engine (`require('totalfusion')`) is plain Node.js and does not depend on Total.js, so `fusion.python('module.function', data)` also works in any Node.js application.
 
 ## Install
 
@@ -22,7 +34,7 @@ No process management, no IPC, no serialization code: a pool of long-lived worke
 npm install totalfusion
 ```
 
-Requires Node.js 20+ and Python 3.9+ already installed. TotalFusion never installs anything on your system. The worker uses only the Python standard library.
+Add it to your Total.js 5 project. It requires Node.js 20+ and Python 3.9+ already installed. TotalFusion never installs anything on your system. The worker uses only the Python standard library.
 
 ## Usage
 
@@ -108,14 +120,49 @@ const { register } = require('totalfusion/total5');
 await register({ python: { path: PATH.root('python'), workers: 2 } });
 ```
 
-Every function decorated with `@action` becomes a `NEWACTION()` named `<module>/<function>` (change it with `prefix` or `@action(id=...)`). Because they are normal actions they work with `ACTION()`, `API` routes and FlowStream. `register` also adds the modules with `@startup` to `preload` automatically.
+Every function decorated with `@action` becomes a `NEWACTION()` named `<module>/<function>` (change it with `prefix` or `@action(id=...)`). Because they are normal actions they work with `ACTION()` and `API` routes (`ROUTE('API /v1/ +count --> contract/count')`). `register` also adds the modules with `@startup` to `preload` automatically.
 
 - **Validation first.** Total.js validates `input` with the contract before Python runs, so invalid data never reaches your function.
 - **MCP is opt-in.** Only functions with `mcp=True` are exposed to agents (`CONF.$mcp = true` enables the endpoint). Everything else stays internal.
 - **Errors.** A Python `ValueError` is treated as the caller's mistake and its message reaches the client. Any other exception returns `The action failed`, and the real error goes to `onerror` (default: `console.error`), so paths, queries or secrets inside exception messages are not leaked.
 - **Boot.** `register({ warmup: true })` loads the models before it resolves, and `preload: false` leaves the modules with `@startup` to load on their first call.
 - **Schemas.** Total.js splits the fields of a schema on commas **even inside a `// comment`**, so `'*text:String // Text, up to 2000 chars'` declares a second field called `up to 2000 chars`. `register` returns a `warnings` list for it: use parentheses or a new line.
-- Needs a Total.js 5 version that includes `mcp.js` for the MCP part (the actions work with any `total5`).
+- **MCP.** Exposing an action as a tool uses the MCP router of Total.js 5 (`CONF.$mcp = true`). Actions and API routes work without it.
+
+### Binary data
+
+`Buffer`, `Uint8Array`, `ArrayBuffer` and the typed arrays (`Float32Array`, `Float64Array`, `Int32Array`, ...) travel as raw bytes next to the JSON, anywhere in the arguments or in the result. No base64, no JSON array of numbers, and the bytes are not copied when the frame is built.
+
+```js
+const image = await fs.promises.readFile('photo.jpg');
+const result = await fusion.python('vision.resize', { image, width: 256 });   // result.image is a Buffer
+```
+
+```python
+def resize(data):
+    picture = Image.open(io.BytesIO(data['image']))      # data['image'] is bytes
+    ...
+    return { 'image': output.getvalue() }                  # bytes -> Buffer
+
+def normalize(data):
+    values = np.frombuffer(data['values'], dtype=np.float32)   # Float32Array -> memoryview, no copy
+    return (values - values.mean()) / values.std()             # numpy array -> Float32Array
+```
+
+| JavaScript | Python |
+|---|---|
+| `Buffer`, `Uint8Array`, `ArrayBuffer` | `bytes` |
+| `Int8Array`, `Int16Array`, `Uint16Array`, `Int32Array`, `Uint32Array`, `Float32Array`, `Float64Array`, `BigInt64Array`, `BigUint64Array` | `memoryview` of the matching type (read-only, no copy) |
+
+From Python, `bytes`, `bytearray`, `memoryview`, `array.array` and anything with the buffer protocol (NumPy arrays included) arrive as a `Buffer` (bytes) or the matching typed array. Notes:
+
+- Arrays are sent **flat**: the shape of a multi-dimensional NumPy array is not transmitted. Send it as another field (`{ data, shape }`) if you need it.
+- Typed arrays are little-endian, like every platform Node.js and CPython run on (x64 and ARM64). Big-endian buffers coming from Python (NumPy `>f4`) are converted for you.
+- Types without a JavaScript typed array (`float16`, complex numbers) arrive as raw bytes in a `Buffer`, as do boolean arrays.
+- Non-contiguous NumPy arrays (slices with a step, transposes) are sent in C order.
+- `"$bin"` is a reserved key and cannot be used in your data.
+- A frame can carry up to 512 MB in total, of which at most 64 MB can be JSON.
+- Measured against sending the same bytes as base64 inside JSON: 1 MB in 0.5 ms instead of 4.4 ms, 32 MB in 14 ms instead of 145 ms, and a 100 MB buffer (133 MB as base64, over the JSON limit) in 43 ms.
 
 ### Errors
 
@@ -138,7 +185,7 @@ Every error is a `FusionError` with a stable `code`.
 
 ## How it works
 
-Each worker is a Python process that talks to Node.js over stdin/stdout with length-prefixed JSON frames (protocol version 1, see [lib/protocol.js](lib/protocol.js)). Calls carry an id, so responses never mix under concurrency. Workers start on demand, are replaced when they crash, exit when the parent dies and do not keep your Node.js process alive while idle.
+Each worker is a Python process that talks to Node.js over stdin/stdout with length-prefixed frames (protocol version 2: JSON for the structure plus raw binary parts, see [lib/protocol.js](lib/protocol.js)). Calls carry an id, so responses never mix under concurrency. Workers start on demand, are replaced when they crash, exit when the parent dies and do not keep your Node.js process alive while idle.
 
 Measured on one machine (Python 3.15, Node 24, macOS arm64), warm workers, JSON payloads:
 
@@ -146,12 +193,15 @@ Measured on one machine (Python 3.15, Node 24, macOS arm64), warm workers, JSON 
 |---|---|---|
 | `child_process` spawn per call | 17.6 ms | 19.8 ms |
 | TotalFusion, small call | 0.07 ms | 0.12 ms |
-| TotalFusion, 1 MB payload round trip | 3.0 ms | 4.4 ms |
-| TotalFusion, 32 MB payload round trip | 104 ms | 120 ms |
+| TotalFusion, 1 MB string in JSON, round trip | 3.0 ms | 4.4 ms |
+| TotalFusion, 1 MB `Buffer`, round trip | 0.5 ms | - |
+| TotalFusion, 32 MB `Buffer`, round trip | 14 ms | - |
+| TotalFusion, 100 MB `Buffer`, round trip | 43 ms | - |
+| TotalFusion, 40 MB `Float32Array`, round trip | 18 ms | - |
 
 With a real library (NumPy in a virtual environment, nearest neighbours over 50,000 vectors of 128 dimensions, see [examples/components/vectors.py](examples/components/vectors.py)): the worker starts and builds the index once (about 145 ms with a warm disk cache), then every call takes about 3 ms (p50), against about 98 ms when a process is spawned per call.
 
-Throughput with 4 workers and trivial calls: about 23,000 calls/s. These numbers are a starting point, not a benchmark suite. Large binary payloads currently go through JSON, and a dedicated binary channel is planned.
+Throughput with 4 workers and trivial calls: about 23,000 calls/s. These numbers are a starting point, not a benchmark suite. Binary data does not go through JSON (see below).
 
 ## Security
 
@@ -162,6 +212,8 @@ Workers are ordinary child processes. They run your Python code with your user's
 ```bash
 npm test
 ```
+
+The NumPy tests are skipped unless you point them to a Python that has NumPy: `TOTALFUSION_TEST_NUMPY=/path/to/python npm test`.
 
 ## License
 

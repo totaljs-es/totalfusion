@@ -38,9 +38,11 @@ describe('calls', function() {
 	});
 
 	test('spreads work over the workers of the pool', async function() {
+		// Each call keeps its worker busy, so three concurrent calls need three different workers
 		const fusion = create({ workers: 3 });
-		const pids = new Set(await Promise.all(Array.from({ length: 30 }, () => fusion.python('sample.sleep_sync', { seconds: 0.05 }).then(() => fusion.python('sample.pid')))));
-		assert.ok(pids.size > 1 && pids.size <= 3);
+		const pids = await Promise.all([1, 2, 3].map(() => fusion.python('sample.slow_pid', { seconds: 0.4 })));
+		assert.equal(new Set(pids).size, 3);
+		assert.equal(fusion.stats().python.workers, 3);
 	});
 
 	test('transfers a large payload', async function() {

@@ -48,5 +48,10 @@ def pid(data):
     return os.getpid()
 
 
+def slow_pid(data):
+    time.sleep(data['seconds'])
+    return os.getpid()
+
+
 def _private(data):
     return 'private'

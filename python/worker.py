@@ -1,12 +1,13 @@
 """TotalFusion Python worker.
 
-Speaks length-prefixed JSON frames with Node.js over stdin/stdout (protocol 1).
+Speaks length-prefixed frames with Node.js over stdin/stdout (protocol 2): JSON plus raw binary parts.
 Standard library only.
 
     worker.py --path <components directory> [--preload module,module]
     worker.py --path <components directory> --describe
 """
 
+import array
 import ast
 import asyncio
 import importlib
@@ -20,8 +21,14 @@ import threading
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 
-PROTOCOL = 1
-MAX_FRAME = 64 * 1024 * 1024
+PROTOCOL = 2
+MAX_FRAME = 512 * 1024 * 1024
+MAX_JSON = 64 * 1024 * 1024
+
+# Binary data crosses the protocol as raw bytes, not as JSON. These are the typed arrays of JavaScript
+# (little endian) and the formats of Python buffers (bytes, bytearray, memoryview, array.array, numpy arrays).
+FORMATS = {'Int8Array': 'b', 'Uint8Array': 'B', 'Int16Array': 'h', 'Uint16Array': 'H', 'Int32Array': 'i', 'Uint32Array': 'I', 'Float32Array': 'f', 'Float64Array': 'd', 'BigInt64Array': 'q', 'BigUint64Array': 'Q'}
+NAMES = {('b', 1): 'Int8Array', ('B', 1): 'Uint8Array', ('?', 1): 'Uint8Array', ('c', 1): 'Uint8Array', ('h', 2): 'Int16Array', ('H', 2): 'Uint16Array', ('i', 4): 'Int32Array', ('I', 4): 'Uint32Array', ('l', 4): 'Int32Array', ('L', 4): 'Uint32Array', ('l', 8): 'BigInt64Array', ('L', 8): 'BigUint64Array', ('q', 8): 'BigInt64Array', ('Q', 8): 'BigUint64Array', ('f', 4): 'Float32Array', ('d', 8): 'Float64Array'}
 MODULE = re.compile(r'^[A-Za-z_]\w*(\.[A-Za-z_]\w*)*$')
 SKIP = ('node_modules', 'venv', 'site-packages')
 
@@ -42,16 +49,90 @@ modules = {}
 stopping = False
 
 
+def pack(obj, parts):
+    """json.dumps hook: buffers go to `parts` and are replaced by a reference."""
+
+    # numpy scalars and 0-d arrays are numbers, not binary data
+    if getattr(obj, 'shape', None) == () and hasattr(obj, 'item'):
+        return obj.item()
+
+    try:
+        view = memoryview(obj)
+    except TypeError:
+        raise TypeError('Object of type %s is not JSON serializable' % type(obj).__name__)
+
+    code = view.format.lstrip('@<>=!')
+    name = NAMES.get((code, view.itemsize), 'Uint8Array')
+
+    # JavaScript typed arrays are little endian. A big-endian buffer (for example numpy '>f4') is converted.
+    if view.format[:1] in ('>', '!') and view.itemsize > 1:
+        if code not in array.typecodes:
+            raise TypeError('Big-endian buffers of format "%s" are not supported, convert them to little-endian first' % view.format)
+        swapped = array.array(code)
+        swapped.frombytes(view.tobytes())
+        swapped.byteswap()
+        raw = memoryview(swapped).cast('B')
+    else:
+        try:
+            raw = view.cast('B') if (view.ndim != 1 or view.format != 'B') else view
+        except (TypeError, ValueError):
+            raw = memoryview(view.tobytes())
+
+    parts.append(raw)
+    return {'$bin': len(parts) - 1, 'type': name}
+
+
 def send(message):
-    data = json.dumps(message, separators=(',', ':'), ensure_ascii=False, allow_nan=False).encode('utf-8')
-    if len(data) > MAX_FRAME:
+
+    parts = []
+    text = json.dumps(message, default=lambda obj: pack(obj, parts), separators=(',', ':'), ensure_ascii=False, allow_nan=False).encode('utf-8')
+
+    if len(text) > MAX_JSON:
+        raise ValueError('The JSON part of the result is larger than %d MB' % (MAX_JSON // 1024 // 1024))
+
+    table = struct.pack('>I', len(parts)) + b''.join(struct.pack('>I', len(part)) for part in parts)
+    total = 4 + len(text) + len(table) + sum(len(part) for part in parts)
+
+    if total > MAX_FRAME:
         raise ValueError('The result is larger than %d MB' % (MAX_FRAME // 1024 // 1024))
+
     with lock:
         try:
-            out.write(struct.pack('>I', len(data)) + data)
+            out.write(struct.pack('>II', total, len(text)))
+            out.write(text)
+            out.write(table)
+            for part in parts:
+                out.write(part)
             out.flush()
         except (BrokenPipeError, OSError):
             os._exit(0)
+
+
+def decode(body):
+
+    view = memoryview(body)
+    (length,) = struct.unpack_from('>I', body, 0)
+    text = bytes(view[4:4 + length])
+    (count,) = struct.unpack_from('>I', body, 4 + length)
+    lengths = struct.unpack_from('>%dI' % count, body, 8 + length)
+    offset = 8 + length + 4 * count
+    parts = []
+
+    for size in lengths:
+        parts.append(view[offset:offset + size])
+        offset += size
+
+    if offset != len(body):
+        raise ValueError('Invalid frame')
+
+    def reference(value):
+        if len(value) == 2 and type(value.get('$bin')) is int and value.get('type') in FORMATS and 0 <= value['$bin'] < len(parts):
+            part = parts[value['$bin']]
+            # Buffer and Uint8Array arrive as bytes, the other typed arrays as a memoryview without copying
+            return bytes(part) if value['type'] == 'Uint8Array' else part.cast(FORMATS[value['type']])
+        return value
+
+    return json.loads(text, object_hook=reference) if parts else json.loads(text)
 
 
 def fail(id, name, message, code=None, tb=None):
@@ -286,15 +367,15 @@ def read(loop):
             head = inp.read(4)
             if len(head) < 4:
                 break
-            (length,) = struct.unpack('>I', head)
-            if length == 0 or length > MAX_FRAME:
+            (total,) = struct.unpack('>I', head)
+            if total < 8 or total > MAX_FRAME:
                 break
-            body = inp.read(length)
-            if len(body) < length:
+            body = inp.read(total)
+            if len(body) < total:
                 break
-            loop.call_soon_threadsafe(dispatch, loop, json.loads(body))
+            loop.call_soon_threadsafe(dispatch, loop, decode(body))
     except Exception:
-        pass
+        traceback.print_exc()
     finally:
         # The parent is gone or closed the pipe
         loop.call_soon_threadsafe(stop, loop)
