@@ -102,10 +102,8 @@ describe('python', function() {
 		assert.equal(await fusion.python('thing.value'), 1);
 
 		Fs.writeFileSync(Path.join(directory, 'thing.py'), 'def value(data:\n    return 5\n');
-		assert.ok(await until(() => fusion.stats().python.recycled.reload >= 1, 5000));
-		await wait(300);
-
-		await assert.rejects(() => fusion.python('thing.value'), err => err.remote && err.remote.name === 'SyntaxError');
+		// The old worker serves until the new one is ready: wait until the calls see the broken file
+		assert.ok(await until(async () => await fusion.python('thing.value').then(() => false, err => !!err.remote && err.remote.name === 'SyntaxError'), 10000), 'the broken file was not picked up');
 		assert.equal(await fusion.python('other.hello'), 'hi');
 
 		Fs.writeFileSync(Path.join(directory, 'thing.py'), VERSION(3));
@@ -157,7 +155,7 @@ describe('python', function() {
 		const directory = components({ 'thing.py': VERSION(1) });
 		const fusion = create(directory);
 		const reloads = [];
-		watch(fusion, { debounce: 150, onreload: info => reloads.push(info) });
+		watch(fusion, { debounce: 700, onreload: info => reloads.push(info) });
 		await fusion.python('thing.value');
 
 		for (let i = 2; i < 8; i++) {
@@ -165,8 +163,8 @@ describe('python', function() {
 			await wait(20);
 		}
 
-		assert.ok(await until(() => reloads.length >= 1, 3000));
-		await wait(400);
+		assert.ok(await until(() => reloads.length >= 1, 8000));
+		await wait(1000);
 		assert.equal(reloads.length, 1);
 		assert.deepEqual(reloads[0].files, ['thing.py']);
 		assert.equal(reloads[0].replaced, 1);

@@ -11,6 +11,7 @@ import array
 import ast
 import asyncio
 import ctypes
+import importlib.machinery
 import importlib.metadata
 import importlib.util
 import importlib
@@ -192,6 +193,37 @@ def fail(id, name, message, code=None, tb=None):
     if tb:
         error['traceback'] = tb
     send({'t': 'res', 'id': id, 'ok': False, 'error': error, 'mem': memory()})
+
+
+class FreshLoader(importlib.machinery.SourceFileLoader):
+    """Loads a component from its source every time: it never reads bytecode and never writes it.
+
+    Python trusts a .pyc when the modification time of the source (in whole seconds) and its size have not changed, so a file
+    that is edited twice within a second without changing its size would keep running the old code, even in a brand new worker.
+    The components are your code and they are small: compiling them at the start of a worker costs nothing, and it also means
+    that TotalFusion never leaves a __pycache__ folder next to your files.
+    """
+
+    def get_code(self, fullname):
+        path = self.get_filename(fullname)
+        return self.source_to_code(self.get_data(path), path)
+
+
+def components_hook(path):
+    """The path hook that gives the components their FreshLoader. The libraries (site-packages, the standard library) keep their bytecode."""
+
+    real = os.path.normcase(os.path.realpath(path))
+    base = os.path.normcase(root)
+
+    if real != base and not real.startswith(base + os.sep):
+        raise ImportError('not a directory of the components')
+
+    return importlib.machinery.FileFinder(
+        path,
+        (importlib.machinery.ExtensionFileLoader, importlib.machinery.EXTENSION_SUFFIXES),
+        (FreshLoader, importlib.machinery.SOURCE_SUFFIXES),
+        (importlib.machinery.SourcelessFileLoader, importlib.machinery.BYTECODE_SUFFIXES)
+    )
 
 
 def hooks(module, attribute):
@@ -761,6 +793,8 @@ def main():
     executor = ThreadPoolExecutor(max_workers=max(8, int(args[args.index('--concurrency') + 1])) if '--concurrency' in args else 8)
 
     sys.path.insert(0, root)
+    sys.path_hooks.insert(0, components_hook)
+    sys.path_importer_cache.clear()
     sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sdk'))
 
     loop = asyncio.new_event_loop()

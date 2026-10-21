@@ -128,6 +128,7 @@ A component is a Python module inside `path`. Every public function defined in i
 - Names starting with `_` and names imported from other modules are not callable.
 - Modules outside `path` (standard library, site-packages) cannot be called. Import them from your own component instead.
 - `print()` and anything written to stdout goes to stderr, so it never breaks the protocol.
+- **Components are always loaded from their source.** Python trusts a `.pyc` when the modification time of the source (in whole seconds) and its size have not changed, so a file saved twice within a second without changing its size would keep running the old code, even in a new worker. TotalFusion never reads or writes bytecode for your components, which also means it never leaves a `__pycache__` next to your files. The libraries you import (NumPy, PyTorch, the standard library) keep their own bytecode.
 
 ### Contracts and hooks
 

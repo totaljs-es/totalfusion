@@ -42,5 +42,25 @@ jobs:
       # The crate of the Rust workers. The runners already have the stable toolchain.
       - run: cargo test --manifest-path rust/Cargo.toml
 
-      # Builds the Rust worker of the tests and runs everything
-      - run: npm test
+      # Builds the Rust worker of the tests and runs everything. The log is kept to find out what failed.
+      - name: npm test
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee test.log
+
+      - name: What failed
+        if: failure()
+        shell: bash
+        run: |
+          echo "=== tests that failed ==="
+          grep -n -E "^\s*(✖|not ok)|failing tests|^ℹ (tests|pass|fail|cancelled|skipped)|^# (tests|pass|fail|cancelled|skipped)" test.log | head -80 || true
+          echo "=== the first error messages ==="
+          grep -n -E "AssertionError|Error \[|Error:|ENOENT|EACCES|timed out" test.log | head -40 || true
+
+      - name: Keep the log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-log-${{ matrix.os }}-node${{ matrix.node }}-python${{ matrix.python }}
+          path: test.log

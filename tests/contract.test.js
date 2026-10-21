@@ -120,7 +120,8 @@ describe('hooks', function() {
 		assert.equal(fusion.stats().python.ready, 2);
 		const call = Date.now();
 		assert.equal(await fusion.python('slow.add_one', { a: 1 }), 2);
-		assert.ok(Date.now() - call < 300);
+		// the model takes 800 ms to load: the call must not wait for it
+		assert.ok(Date.now() - call < 600);
 	});
 
 	test('warmup rejects with the real reason when a worker cannot start', async function() {

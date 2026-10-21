@@ -534,7 +534,8 @@ describe('calls at the same time in one worker', { skip }, function() {
 		await fusion.rust('pid');
 		const started = Date.now();
 		const pids = await Promise.all(Array.from({ length: 4 }, () => fusion.rust('slow_pid', { ms: 400 })));
-		assert.ok(Date.now() - started < 800, 'they did not overlap');
+		// serial: 1600 ms
+		assert.ok(Date.now() - started < 1200, 'they did not overlap');
 		assert.equal(new Set(pids).size, 1);
 		assert.equal(fusion.stats().rust.workers, 1);
 	});

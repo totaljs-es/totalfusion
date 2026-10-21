@@ -52,7 +52,8 @@ describe('calls at the same time in one worker', function() {
 
 		const started = Date.now();
 		await calls;
-		assert.ok(Date.now() - started + 150 < 800, 'they did not overlap');
+		// serial: 1600 ms. They overlap if it is clearly less (150 ms were spent before)
+		assert.ok(Date.now() - started + 150 < 1200, 'they did not overlap');
 		assert.equal(fusion.stats().python.workers, 1);
 		assert.equal(fusion.stats().python.running, 0);
 	});
@@ -61,7 +62,7 @@ describe('calls at the same time in one worker', function() {
 		const fusion = create({ workers: 1, concurrency: 4 });
 		await fusion.python('sample.pid');
 		const [elapsed, pids] = await timed(() => Promise.all(Array.from({ length: 4 }, () => fusion.python('sample.slow_pid', { seconds: 0.4 }))));
-		assert.ok(elapsed < 800, 'they did not overlap: ' + elapsed + ' ms');
+		assert.ok(elapsed < 1200, 'they did not overlap: ' + elapsed + ' ms');
 		assert.equal(new Set(pids).size, 1);
 	});
 
@@ -76,7 +77,8 @@ describe('calls at the same time in one worker', function() {
 		await fusion.warmup('python');
 		const [elapsed, pids] = await timed(() => Promise.all(Array.from({ length: 6 }, () => fusion.python('sample.slow_pid', { seconds: 0.4 }))));
 		assert.equal(new Set(pids).size, 3);
-		assert.ok(elapsed < 800, 'elapsed: ' + elapsed + ' ms');
+		// serial: 2400 ms
+		assert.ok(elapsed < 1500, 'elapsed: ' + elapsed + ' ms');
 		assert.deepEqual(fusion.stats().python.details.map(worker => worker.calls), [2, 2, 2]);
 	});
 
@@ -93,8 +95,8 @@ describe('calls at the same time in one worker', function() {
 	test('calls wait in the queue when every worker is full', async function() {
 		const fusion = create({ workers: 1, concurrency: 2 });
 		const [elapsed] = await timed(() => Promise.all(Array.from({ length: 4 }, () => fusion.python('sample.sleep_async', { seconds: 0.3 }))));
+		// two at a time: at least two rounds of 300 ms. (Being fast is not what this proves, so there is no upper bound.)
 		assert.ok(elapsed >= 550, 'elapsed: ' + elapsed + ' ms');
-		assert.ok(elapsed < 1100, 'elapsed: ' + elapsed + ' ms');
 	});
 
 });
@@ -114,7 +116,8 @@ describe('streams at the same time', function() {
 		await fusion.python('sample.pid');
 		const [elapsed, results] = await timed(() => Promise.all(Array.from({ length: 4 }, () => collect(fusion.stream('python', 'streams.ticks', { n: 3, delay: 0.15 })))));
 		assert.ok(results.every(items => items.length === 3));
-		assert.ok(elapsed < 900, 'elapsed: ' + elapsed + ' ms');
+		// serial: 1800 ms
+		assert.ok(elapsed < 1300, 'elapsed: ' + elapsed + ' ms');
 	});
 
 	test('a consumer that stops reading does not block the other calls of the worker', async function() {

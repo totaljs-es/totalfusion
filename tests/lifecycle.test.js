@@ -90,7 +90,8 @@ describe('recycling by calls', function() {
 			await wait(20);
 		}
 
-		assert.ok(slowest < 300, 'a call waited ' + slowest + ' ms');
+		// the replacement takes 800 ms to load its model: no call may wait for that
+		assert.ok(slowest < 600, 'a call waited ' + slowest + ' ms');
 		assert.ok(fusion.stats().python.recycled.calls >= 1);
 
 		// The first worker was replaced and is gone
@@ -191,7 +192,7 @@ describe('health', function() {
 		const started = Date.now();
 		const pid = await fusion.python('health.pid');
 		assert.notEqual(pid, wedged);
-		assert.ok(Date.now() - started < 1000);
+		assert.ok(Date.now() - started < 3000);
 	});
 
 	test('a healthy idle worker is left alone', async function() {

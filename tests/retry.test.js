@@ -113,7 +113,12 @@ describe('a call is never repeated unless it is declared idempotent', function()
 		const fusion = create();
 		const file = marker();
 		const outcome = assert.rejects(fusion.python('flaky.hangs', { marker: file }, { idempotent: true, timeout: 0 }), { code: 'CLOSED' });
-		await wait(300);
+
+		// The function must be running before the pool closes: on a slow machine the worker takes a while to start
+		const limit = Date.now() + 10000;
+		while (attempts(file) < 1 && Date.now() < limit)
+			await wait(25);
+
 		await fusion.shutdown();
 		await outcome;
 		assert.equal(attempts(file), 1);

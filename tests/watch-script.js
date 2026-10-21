@@ -30,6 +30,21 @@ setInterval(() => {}, 1000);
 
 let waiting = null;
 
+// The old worker serves until the new one is ready, so right after a change the answer can still be the old one: wait for the new one
+async function eventually(call, accept) {
+
+	let result;
+
+	for (let i = 0; i < 200; i++) {
+		result = await call();
+		if (accept(result))
+			return result;
+		await new Promise(resolve => setTimeout(resolve, 50));
+	}
+
+	return result;
+}
+
 // Writes the file and waits until the contracts have been read again
 function change(content) {
 	return new Promise(resolve => {
@@ -49,13 +64,13 @@ function change(content) {
 	report.first = await run('calc/double', { n: 2 });
 
 	await change(code(DOUBLE.replace('%s', '3')));
-	report.edited = await run('calc/double', { n: 2 });
+	report.edited = await eventually(() => run('calc/double', { n: 2 }), result => result.ok && result.output === 6);
 
 	await change(code(DOUBLE.replace('%s', '3') + '\n\n' + TRIPLE));
-	report.added = await run('calc/triple', { n: 5 });
+	report.added = await eventually(() => run('calc/triple', { n: 5 }), result => result.ok && result.output === 15);
 
 	await change(code(TRIPLE));
-	report.removed = { double: !!F.actions['calc/double'], triple: await run('calc/triple', { n: 5 }) };
+	report.removed = { double: !!F.actions['calc/double'], triple: await eventually(() => run('calc/triple', { n: 5 }), result => result.ok && result.output === 15) };
 
 	// the same console.error that reports a broken file would fill the output: only what matters is kept
 	const error = console.error;
@@ -65,7 +80,7 @@ function change(content) {
 	report.broken = { stillThere: !!F.actions['calc/triple'], errors: info.errors };
 
 	await change(code(TRIPLE.replace('* 3', '* 4')));
-	report.fixed = await run('calc/triple', { n: 5 });
+	report.fixed = await eventually(() => run('calc/triple', { n: 5 }), result => result.ok && result.output === 20);
 
 	registered.close();
 	await fusion.shutdown();
