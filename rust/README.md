@@ -55,6 +55,10 @@ The methods that describe a function apply to the function registered just befor
 
 It carries the protocol. On Unix and on Windows the crate redirects it to the error output for you, so `println!` is harmless, but use `eprintln!` to be safe everywhere. (The Windows code compiles but has not been run on Windows yet.)
 
+## Rebuilding while the application runs
+
+Windows does not let anything overwrite an executable that is running, so on Windows TotalFusion runs your worker from a copy and the file `cargo build` writes stays free (`shadowCopy`, on by default there). With `fusion.watch('rust')` the workers are replaced by the new build.
+
 ## Requirements
 
 Rust 2021 edition. The only dependency is `serde_json`. Tested with Rust 1.99 on macOS (Apple silicon).

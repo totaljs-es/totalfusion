@@ -599,3 +599,91 @@ describe('calls at the same time in one worker', { skip }, function() {
 	});
 
 });
+
+describe('the worker runs from a copy, so the file you build stays free', { skip }, function() {
+
+	const real = file => Fs.realpathSync(file);
+
+	function copyOf(original) {
+		const directory = Fs.mkdtempSync(Path.join(Os.tmpdir(), 'totalfusion-shadow-test-'));
+		const file = Path.join(directory, process.platform === 'win32' ? 'worker.exe' : 'worker');
+		Fs.copyFileSync(original, file);
+		Fs.chmodSync(file, 0o755);
+		return file;
+	}
+
+	test('with shadowCopy the worker is not the file that you built', async function() {
+		const file = copyOf(build());
+		const fusion = create({ binary: file, shadowCopy: true });
+		const running = await fusion.rust('exe');
+		assert.notEqual(real(running), real(file));
+		assert.ok(running.includes('totalfusion-shadow'), running);
+		assert.equal(await fusion.rust('math.add', { a: 1, b: 2 }).then(result => result.sum), 3);
+	});
+
+	test('the file that you built can be replaced while the workers run, and a reload runs the new build', async function() {
+
+		const file = copyOf(build());
+		const fusion = create({ binary: file, shadowCopy: true });
+		const reloads = [];
+		const handle = fusion.watch('rust', { debounce: 150, log: false, onreload: info => reloads.push(info) });
+
+		try {
+			assert.equal(await fusion.rust('math.add', { a: 1, b: 2 }).then(result => result.sum), 3);
+
+			// What cargo does when it finishes: put the new binary where the old one was. On Windows this fails if the old one is running.
+			const next = file + '.next';
+			Fs.copyFileSync(build.example(), next);
+			Fs.chmodSync(next, 0o755);
+			Fs.renameSync(next, file);
+
+			assert.ok(await until(async () => await fusion.rust('collatz.longest', { limit: 100 }).then(() => true, () => false), 8000), 'the new build was not picked up');
+			assert.equal(reloads.length >= 1, true);
+		} finally {
+			handle.close();
+		}
+	});
+
+	test('the copies of old builds are cleaned up', async function() {
+
+		const file = copyOf(build());
+		const fusion = create({ binary: file, shadowCopy: true, forwardStderr: false });
+		const handle = fusion.watch('rust', { debounce: 100, log: false });
+
+		try {
+			const first = await fusion.rust('exe');
+
+			const next = file + '.next';
+			Fs.copyFileSync(build.example(), next);
+			Fs.chmodSync(next, 0o755);
+			Fs.renameSync(next, file);
+
+			assert.ok(await until(async () => await fusion.rust('collatz.longest', { limit: 100 }).then(() => true, () => false), 8000));
+			await wait(500);
+
+			const directory = Path.dirname(first);
+			// Where the system lets it, the old copy is gone: a copy that is in use cannot be deleted (Windows), the new one is there anyway
+			assert.ok(Fs.readdirSync(directory).length <= 2, Fs.readdirSync(directory).join(', '));
+		} finally {
+			handle.close();
+		}
+	});
+
+	test('without it the worker is the file itself (except on Windows, where it is a copy)', async function() {
+		const file = copyOf(build());
+		const fusion = create({ binary: file });
+		const running = await fusion.rust('exe');
+
+		if (process.platform === 'win32')
+			assert.ok(running.includes('totalfusion-shadow'), running);
+		else
+			assert.equal(real(running), real(file));
+	});
+
+	test('shadowCopy: false runs the file itself on every system', async function() {
+		const file = copyOf(build());
+		const fusion = create({ binary: file, shadowCopy: false });
+		assert.equal(real(await fusion.rust('exe')), real(file));
+	});
+
+});

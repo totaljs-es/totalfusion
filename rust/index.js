@@ -2,6 +2,8 @@
 
 const Path = require('path');
 const Fs = require('fs');
+const Os = require('os');
+const Crypto = require('crypto');
 const { spawn, execFile } = require('child_process');
 const { Pool, bytes } = require('../lib/pool');
 const { FusionError } = require('../lib/errors');
@@ -25,6 +27,52 @@ function binary(config) {
 	return file;
 }
 
+// Windows does not let anything overwrite or delete an executable that is running, so `cargo build` could not replace your worker
+// while it is in use, and a reload would never see the new build. So on Windows (and when `shadowCopy` is true) the worker runs
+// from a copy, and the file you build stays free. The copy is named after the modification time and the size of the original,
+// so a new build is a new copy and the old ones are removed when no worker uses them.
+function executable(file, config) {
+
+	if (!(config.shadowCopy != null ? config.shadowCopy : process.platform === 'win32'))
+		return file;
+
+	const stat = Fs.statSync(file);
+	const directory = Path.join(Os.tmpdir(), 'totalfusion-shadow', Crypto.createHash('sha1').update(file).digest('hex').slice(0, 12));
+	const copy = Path.join(directory, Math.floor(stat.mtimeMs) + '-' + stat.size + Path.extname(file));
+
+	if (!Fs.existsSync(copy)) {
+
+		Fs.mkdirSync(directory, { recursive: true });
+
+		// Copied under another name and moved into place: a worker that starts at the same time never runs half a file
+		const partial = copy + '.' + Crypto.randomBytes(4).toString('hex') + '.tmp';
+		Fs.copyFileSync(file, partial);
+		Fs.chmodSync(partial, 0o755);
+
+		try {
+			Fs.renameSync(partial, copy);
+		} catch {
+			// Another worker put its copy there first (and may be running it)
+			Fs.rmSync(partial, { force: true });
+		}
+	}
+
+	// The copies of earlier builds go away if nobody is running them (the system refuses to delete the ones in use)
+	for (const name of Fs.readdirSync(directory)) {
+
+		if (Path.join(directory, name) === copy)
+			continue;
+
+		try {
+			Fs.rmSync(Path.join(directory, name), { force: true });
+		} catch {
+			// In use: it goes away next time
+		}
+	}
+
+	return copy;
+}
+
 function missing(file) {
 	return new FusionError('NOT_FOUND', 'The Rust worker "' + file + '" does not exist. Build it with: cargo build --release');
 }
@@ -38,7 +86,7 @@ exports.create = function(config) {
 
 	return new Pool(Object.assign(poolOptions('rust', config), {
 		hint: 'The Rust worker "' + file + '" cannot be started: is it built for this system? Build it with: cargo build --release',
-		spawn: () => spawn(file, config.args || [], { cwd: config.cwd || Path.dirname(file), env: config.env || process.env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
+		spawn: () => spawn(executable(file, config), config.args || [], { cwd: config.cwd || Path.dirname(file), env: config.env || process.env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
 	}));
 };
 

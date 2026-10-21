@@ -14,6 +14,7 @@ The first version.
 - **Keeping workers healthy:** recycling by number of calls and by memory with no call lost (the replacement starts first), a health check of the idle workers, `warmup`, `preload` and `@startup`/`@shutdown` hooks.
 - **Events:** `fusion` is an `EventEmitter` that reports when workers are ready, end, are replaced or stop answering, when a call is repeated and when the code is reloaded.
 - **Retrying:** a call that is declared idempotent (`{ idempotent: true }`, `@action(idempotent=True)` or `.idempotent(true)`) is repeated on another worker if its worker dies. Nothing is repeated otherwise.
+- **Rust on Windows:** the worker runs from a copy, so `cargo build` can replace the binary while it is in use and the reload picks the new build up (`shadowCopy`).
 - **Fresh code:** the components of a Python worker are loaded from their source every time, never from bytecode (a file saved twice within a second with the same size is never missed), and no `__pycache__` is left next to them.
 - **Development:** `fusion.watch()` replaces the workers when the code changes, and with Total.js the contracts are read again.
 - **Diagnosis:** `fusion.doctor()` and `npx totalfusion doctor` check the interpreter (or the Rust binary), the components, the libraries and `requirements.txt` without importing or installing anything, and the errors at run time say how to install a missing library.

@@ -37,6 +37,7 @@ fn main() {
         .output("length:Number")
         .function("echo", |call: &Call| Ok(call.args.clone()))
         .function("pid", |_call: &Call| Ok(std::process::id().into()))
+        .function("exe", |_call: &Call| Ok(std::env::current_exe().map(|path| path.to_string_lossy().to_string()).unwrap_or_default().into()))
         .function("memory", |_call: &Call| Ok(totalfusion::memory().into()))
         // failures
         .function("fail", |_call: &Call| Err(Error::new("something failed")))

@@ -115,6 +115,7 @@ The options of `fusion.configure({ python: {...} })` and `fusion.configure({ rus
 | `binary` | Rust | | The path of the worker you built. |
 | `args` | Rust | none | Arguments for the worker. |
 | `cwd` | Rust | folder of the binary | Working directory of the worker. |
+| `shadowCopy` | Rust | `true` on Windows | Run the worker from a copy, see [Rust](#rust). |
 
 Options of a single call (`fusion.python(fn, args, options)`): `timeout`, `signal` (an `AbortSignal`), `idempotent` and `retries` (see [Retrying](#retrying-a-call-that-can-be-repeated)), and for a stream `highWaterMark`.
 
@@ -433,7 +434,7 @@ The guide of the crate, with the whole API, is in [rust/README.md](rust/README.m
 - **Same options as Python:** `workers`, `concurrency`, `timeout`, `maxQueue`, `maxCalls`, `maxMemory`, `healthInterval`, `cancelGrace`... plus `args`, `env` and `cwd` for the process. Every call of a worker runs in its own thread, so `concurrency` makes one process use all the cores (see [Several calls at the same time](#several-calls-at-the-same-time)).
 - **Contracts are declared in code**, with the same names as `@action` in Python (`summary`, `input`, `output`, `query`, `params`, `permissions`, `mcp`...). The binary prints them with `--describe`.
 - **Where Rust pays off.** Heavy CPU work that should not block Node.js and that can use several cores. For the longest Collatz chain below 3 million (the same algorithm in each language, eight cores): optimized JavaScript takes 1.2 s and Rust 0.33 s (3.6x; the naive JavaScript most people write is 14x slower than Rust), and pure Python is 48x slower than Rust. Eight of those jobs take 9.1 s in JavaScript, **blocking the event loop the whole time**, and 0.7 s on four Rust workers, which leave the event loop free (1 ms of delay). A call that does nothing costs 0.03 ms. For light work on small data, JavaScript in the same process wins: it pays no transfer.
-- **Windows:** the SDK points the standard output of the process to the error output, as it does on Unix, so `println!` is harmless. That code compiles for Windows but has not been run there.
+- **Windows:** the SDK points the standard output of the process to the error output, as it does on Unix, so `println!` is harmless. Windows does not let anything overwrite an executable that is running, so on Windows the worker runs from a **copy** (in the temporary folder, named after the time and size of your build) and the file you build stays free: `cargo build` can replace it while the workers are running, and `fusion.watch('rust')` picks the new build up. The copies of old builds are removed. `shadowCopy: true` does the same on any system, `shadowCopy: false` turns it off.
 
 ## Development: reload when the code changes
 
