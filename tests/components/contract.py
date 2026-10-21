@@ -51,6 +51,26 @@ def count_up(data):
         yield i
 
 
+@action(summary='Shows what Python receives', mcp=True, input='a:Number', query='*page:Number\nterm:String', params='id:UID')
+def sections(data):
+    return data
+
+
+@action(summary='Only a query', query='limit:Number')
+def only_query(data):
+    return data
+
+
+@action(summary='Only some roles', permissions='admin,editor', input='x:Number')
+def restricted(data):
+    return 'allowed'
+
+
+@action(summary='Only a logged in user', user=True)
+def members(data):
+    return 'member'
+
+
 def undecorated(data):
     return 'callable but not registered'
 

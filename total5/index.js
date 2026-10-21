@@ -2,8 +2,8 @@
 
 const { FusionError } = require('../lib/errors');
 
-// Keys of @action(...) that are passed to NEWACTION()
-const KEYS = ['input', 'output', 'permissions'];
+// Keys of @action(...) that are passed to NEWACTION(): the contract and who may call the action
+const KEYS = ['input', 'output', 'query', 'params', 'permissions', 'user', 'sa', 'su'];
 
 // Total.js splits the fields of a schema on commas, even inside a `// comment`:
 // '*text:String // Text, up to 2000 chars' declares an extra field called "up to 2000 chars"
@@ -117,8 +117,25 @@ exports.register = async function(options) {
 				action[key] = meta[key];
 		}
 
+		// Python receives the input as it is. If the contract also declares `query` or `params`, it receives an object
+		// with the sections that were declared: { input, query, params }. Total.js has validated all of them.
+		const sections = meta.query != null || meta.params != null;
+
 		action.action = function($, model) {
-			fusion.call(runtime, item.fn, model, { timeout: meta.timeout }).then(function(result) {
+
+			let args = model;
+
+			if (sections) {
+				args = {};
+				if (meta.input != null)
+					args.input = model;
+				if (meta.query != null)
+					args.query = $.query;
+				if (meta.params != null)
+					args.params = $.params;
+			}
+
+			fusion.call(runtime, item.fn, args, { timeout: meta.timeout }).then(function(result) {
 				$.callback(result);
 			}, function(err) {
 				onerror(err, id);

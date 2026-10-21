@@ -13,9 +13,23 @@ const fusion = require('..');
 CONF.$imprint = false;
 F.console = NOOP;
 
-function run(id, input) {
+// options.user: the user of the call (default an administrator, null = nobody), options.query, options.params
+function run(id, input, options) {
+
+	if (!options)
+		options = {};
+
 	const builder = ACTION(id, input);
-	builder.user({ sa: true, name: 'test' });
+
+	if (options.user !== null)
+		builder.user(options.user === undefined ? { sa: true, name: 'test' } : options.user);
+
+	if (options.query)
+		builder.query(options.query);
+
+	if (options.params)
+		builder.params(options.params);
+
 	let errors = null;
 	builder.options.error = err => errors = err.output();
 	return builder.promise().then(output => ({ ok: true, output }), () => ({ ok: false, errors }));
@@ -34,6 +48,25 @@ function run(id, input) {
 	report.reject = await run('contract/reject', { value: 1 });
 	report.bare = await run('contract/bare', null);
 	report.loaded = await fusion.python('contract.loaded');
+
+	// query and params reach Python validated by the contract
+	const id = UID();
+	report.sections = { id, result: await run('contract/sections', { a: '5' }, { query: { page: '2', term: 'x' }, params: { id } }) };
+	report.sectionsInvalid = await run('contract/sections', { a: '5' }, { query: { page: 'abc' }, params: { id } });
+	report.sectionsMissing = await run('contract/sections', { a: '5' }, { query: {}, params: { id } });
+	report.sectionsBadId = await run('contract/sections', { a: '5' }, { query: { page: '1' }, params: { id: 'not an id' } });
+	report.onlyQuery = await run('contract/only_query', null, { query: { limit: '10' } });
+
+	// who may call: the framework checks it before Python is reached
+	report.restricted = {
+		reader: await run('contract/restricted', { x: 1 }, { user: { permissions: ['reader'] } }),
+		editor: await run('contract/restricted', { x: 1 }, { user: { permissions: ['editor'] } }),
+		admin: await run('contract/restricted', { x: 1 }, { user: { permissions: ['admin'] } }),
+		superadmin: await run('contract/restricted', { x: 1 }, { user: { sa: true } }),
+		nobody: await run('contract/restricted', { x: 1 }, { user: null })
+	};
+
+	report.members = { nobody: await run('contract/members', null, { user: null }), user: await run('contract/members', null, { user: { id: 1 } }) };
 
 	await new Promise(resolve => setTimeout(resolve, 400));
 

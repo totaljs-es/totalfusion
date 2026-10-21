@@ -171,13 +171,19 @@ exports.install = function() {
 
 Every function decorated with `@action` becomes a `NEWACTION()` named `<module>/<function>` (change it with `prefix` or `@action(id=...)`). Because they are normal actions they work with `ACTION()` and `API` routes (`ROUTE('API /v1/ +count --> contract/count')`). `register` also adds the modules with `@startup` to `preload` automatically.
 
-- **Validation first.** Total.js validates `input` with the contract before Python runs, so invalid data never reaches your function.
+- **Validation first.** Total.js validates `input` with the contract before Python runs, so invalid data never reaches your function. Fields marked with `*` are required; an optional field with an invalid value is dropped by Total.js, not reported.
+- **Query and params.** Declare them in the contract like the input: `@action(input='a:Number', query='*page:Number', params='id:UID')`. Python then receives an object with the sections that were declared, already validated and converted: `{ 'input': {'a': 5}, 'query': {'page': 2}, 'params': {'id': '...'} }`. Without `query` and `params` it receives the input alone, as before. `ACTION('x', input).query({...}).params({...})`, the `API` routes and the MCP tools (`arguments: { input, query, params }`) all fill them.
+- **Who may call.** `permissions` (`'admin,editor'`: any of them), `user=True` (only a logged in user), `sa` and `su` go to `NEWACTION()` as they are, so Total.js decides before Python is reached and answers `401` otherwise. An administrator (`user.sa` or `user.su`) always passes. Python does not see the user: if a function needs to know who calls, pass what it needs in the input.
 - **MCP is opt-in.** Only functions with `mcp=True` are exposed to agents (`CONF.$mcp = true` enables the endpoint). Everything else stays internal.
 - **Errors.** A Python `ValueError` is treated as the caller's mistake and its message reaches the client. Any other exception returns `The action failed`, and the real error goes to `onerror` (default: `console.error`), so paths, queries or secrets inside exception messages are not leaked.
 - **Generators.** A function that yields is a stream, not an action: `register` skips it with a warning. Call it with `fusion.stream()` or `fusion.sse()`.
 - **Boot.** `fusion.register({ warmup: true })` loads the models before it resolves, and `preload: false` leaves the modules with `@startup` to load on their first call.
 - **Schemas.** Total.js splits the fields of a schema on commas **even inside a `// comment`**, so `'*text:String // Text, up to 2000 chars'` declares a second field called `up to 2000 chars`. `register` returns a `warnings` list for it: use parentheses or a new line.
 - **MCP.** Exposing an action as a tool uses the MCP router of Total.js 5 (`CONF.$mcp = true`). Actions and API routes work without it.
+
+#### FlowStream
+
+[total5/flow/python.html](total5/flow/python.html) is a FlowStream component that calls a Python function with the data of each message: the result goes out through the first output, and a failure through the second one as `{ code, message }` (the message of the Python exception, without the traceback; do not connect that output straight to a public response). Its settings are the function (`module.function`) and a timeout. It uses the same pool of workers as the rest of the application. It is a standard component file; how you add it to your flow depends on your project. It was run with the test harness of Total.js (`flow-test.js`), not inside the Flow designer.
 
 ### Binary data
 
