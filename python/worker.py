@@ -1,9 +1,13 @@
 """TotalFusion Python worker.
 
 Speaks length-prefixed JSON frames with Node.js over stdin/stdout (protocol 1).
-Standard library only. Usage: worker.py --path <components directory>
+Standard library only.
+
+    worker.py --path <components directory> [--preload module,module]
+    worker.py --path <components directory> --describe
 """
 
+import ast
 import asyncio
 import importlib
 import inspect
@@ -19,6 +23,7 @@ from concurrent.futures import ThreadPoolExecutor
 PROTOCOL = 1
 MAX_FRAME = 64 * 1024 * 1024
 MODULE = re.compile(r'^[A-Za-z_]\w*(\.[A-Za-z_]\w*)*$')
+SKIP = ('node_modules', 'venv', 'site-packages')
 
 # The real stdout is reserved for the protocol. Everything that prints
 # (including C extensions writing to fd 1) goes to stderr instead.
@@ -33,6 +38,8 @@ lock = threading.Lock()
 executor = ThreadPoolExecutor(max_workers=8)
 running = {}
 resolved = {}
+modules = {}
+stopping = False
 
 
 def send(message):
@@ -56,7 +63,52 @@ def fail(id, name, message, code=None, tb=None):
     send({'t': 'res', 'id': id, 'ok': False, 'error': error})
 
 
-def resolve(name):
+def hooks(module, attribute):
+    """Functions defined in the module (not imported into it) marked by the SDK decorators."""
+    return [fn for fn in vars(module).values() if callable(fn) and getattr(fn, attribute, False) and getattr(fn, '__module__', None) == module.__name__]
+
+
+async def invoke(fn, *args):
+    result = fn(*args)
+    if inspect.isawaitable(result):
+        result = await result
+    return result
+
+
+async def load(loop, name):
+    """Imports a component once per worker and runs its startup hooks. Concurrent callers share the same load."""
+
+    if name not in modules:
+        modules[name] = loop.create_task(import_module(loop, name))
+
+    try:
+        return await asyncio.shield(modules[name])
+    except BaseException:
+        modules.pop(name, None)
+        raise
+
+
+async def import_module(loop, name):
+
+    try:
+        module = await loop.run_in_executor(executor, importlib.import_module, name)
+    except ModuleNotFoundError as e:
+        if e.name and name.split('.')[0] == e.name.split('.')[0]:
+            raise LookupError('Module "%s" not found in %s' % (name, root))
+        raise
+
+    file = getattr(module, '__file__', None)
+
+    if not file or not os.path.realpath(file).startswith(root + os.sep):
+        raise LookupError('Module "%s" is not a component of %s' % (name, root))
+
+    for fn in hooks(module, '__fusion_startup__'):
+        await invoke(fn)
+
+    return module
+
+
+async def resolve(loop, name):
     """Only functions defined in modules inside the components directory can be called."""
 
     if name in resolved:
@@ -67,18 +119,7 @@ def resolve(name):
     if not module_name or not MODULE.match(module_name) or not func_name or func_name.startswith('_'):
         raise LookupError('Invalid function name "%s", expected "module.function"' % name)
 
-    try:
-        module = importlib.import_module(module_name)
-    except ModuleNotFoundError as e:
-        if e.name and module_name.split('.')[0] == e.name.split('.')[0]:
-            raise LookupError('Module "%s" not found in %s' % (module_name, root))
-        raise
-
-    file = getattr(module, '__file__', None)
-
-    if not file or not os.path.realpath(file).startswith(root + os.sep):
-        raise LookupError('Module "%s" is not a component of %s' % (module_name, root))
-
+    module = await load(loop, module_name)
     fn = getattr(module, func_name, None)
     exported = getattr(module, '__all__', None)
 
@@ -94,13 +135,81 @@ def resolve(name):
     return fn
 
 
+def decorator(node, name):
+    """Returns the decorator call (or True for a bare decorator) when `node` is decorated with `name`."""
+
+    for item in node.decorator_list:
+        target = item.func if isinstance(item, ast.Call) else item
+        found = target.id if isinstance(target, ast.Name) else (target.attr if isinstance(target, ast.Attribute) else None)
+        if found == name:
+            return item
+    return None
+
+
+def describe():
+    """Reads the contracts declared with @action without importing anything (no side effects, no models loaded)."""
+
+    actions = []
+    startups = []
+    errors = []
+
+    for folder, dirs, files in os.walk(root):
+
+        dirs[:] = sorted(d for d in dirs if not d.startswith(('.', '_')) and d not in SKIP)
+
+        for file in sorted(files):
+
+            if not file.endswith('.py') or file.startswith('_'):
+                continue
+
+            path = os.path.join(folder, file)
+            module = os.path.relpath(path, root)[:-3].replace(os.sep, '.')
+
+            try:
+                with open(path, encoding='utf-8') as f:
+                    tree = ast.parse(f.read(), path)
+            except (SyntaxError, UnicodeDecodeError, ValueError) as e:
+                errors.append({'module': module, 'message': '%s: %s' % (type(e).__name__, e)})
+                continue
+
+            for node in tree.body:
+
+                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+
+                if decorator(node, 'startup') and module not in startups:
+                    startups.append(module)
+
+                found = decorator(node, 'action')
+
+                if found is None or node.name.startswith('_'):
+                    continue
+
+                try:
+                    meta = {kw.arg: ast.literal_eval(kw.value) for kw in found.keywords if kw.arg} if isinstance(found, ast.Call) else {}
+                except ValueError:
+                    errors.append({'module': module, 'function': node.name, 'message': 'The arguments of @action must be literals'})
+                    continue
+
+                actions.append({
+                    'fn': module + '.' + node.name,
+                    'module': module,
+                    'name': node.name,
+                    'async': isinstance(node, ast.AsyncFunctionDef),
+                    'doc': ast.get_docstring(node),
+                    'meta': meta
+                })
+
+    return {'actions': actions, 'startups': startups, 'errors': errors}
+
+
 async def run(loop, message):
 
     id = message['id']
     entry = running[id]
 
     try:
-        fn = resolve(message['fn'])
+        fn = await resolve(loop, message['fn'])
 
         if inspect.iscoroutinefunction(fn):
             entry['async'] = True
@@ -141,10 +250,27 @@ def dispatch(loop, message):
         stop(loop)
 
 
-def stop(loop):
+async def finish():
+
     for entry in list(running.values()):
         entry['task'].cancel()
-    loop.call_later(0.05, lambda: os._exit(0))
+
+    for name, task in list(modules.items()):
+        if task.done() and not task.cancelled() and not task.exception():
+            for fn in hooks(task.result(), '__fusion_shutdown__'):
+                try:
+                    await asyncio.wait_for(invoke(fn), 1.5)
+                except BaseException:
+                    traceback.print_exc()
+
+    os._exit(0)
+
+
+def stop(loop):
+    global stopping
+    if not stopping:
+        stopping = True
+        loop.create_task(finish())
 
 
 def read(loop):
@@ -174,10 +300,28 @@ def main():
     args = sys.argv[1:]
     path = args[args.index('--path') + 1] if '--path' in args else os.getcwd()
     root = os.path.realpath(path)
+
+    if '--describe' in args:
+        out.write(json.dumps(describe()).encode('utf-8'))
+        out.flush()
+        os._exit(0)
+
     sys.path.insert(0, root)
+    sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sdk'))
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+
+    # Heavy initialization (models, connections) happens before the worker reports ready
+    preload = args[args.index('--preload') + 1].split(',') if '--preload' in args else []
+
+    for name in filter(None, preload):
+        try:
+            loop.run_until_complete(load(loop, name))
+        except BaseException:
+            print('TotalFusion: cannot preload "%s"' % name, file=sys.stderr)
+            traceback.print_exc()
+            os._exit(1)
 
     send({'t': 'ready', 'v': PROTOCOL, 'pid': os.getpid(), 'python': sys.version.split()[0]})
     threading.Thread(target=read, args=(loop,), daemon=True).start()

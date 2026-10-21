@@ -18,6 +18,7 @@ class Fusion {
 		this.configure = this.configure.bind(this);
 		this.call = this.call.bind(this);
 		this.python = this.python.bind(this);
+		this.describe = this.describe.bind(this);
 		this.stats = this.stats.bind(this);
 		this.shutdown = this.shutdown.bind(this);
 
@@ -66,6 +67,19 @@ class Fusion {
 
 	python(fn, args, options) {
 		return this.call('python', fn, args, options);
+	}
+
+	// Contracts declared with @action in the components of a runtime, read without running them
+	describe(runtime) {
+
+		if (!ADAPTERS[runtime])
+			return Promise.reject(new FusionError('NOT_FOUND', 'Unknown runtime "' + runtime + '"'));
+
+		try {
+			return ADAPTERS[runtime]().describe(this.config[runtime] || {});
+		} catch (err) {
+			return Promise.reject(err);
+		}
 	}
 
 	stats() {

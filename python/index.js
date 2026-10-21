@@ -2,7 +2,7 @@
 
 const Path = require('path');
 const Fs = require('fs');
-const { spawn } = require('child_process');
+const { spawn, execFile } = require('child_process');
 const { Pool } = require('../lib/pool');
 const { FusionError } = require('../lib/errors');
 
@@ -21,13 +21,24 @@ function interpreter(config) {
 	return process.env.TOTALFUSION_PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
 }
 
-exports.create = function(config) {
+function components(config) {
 
-	const python = interpreter(config);
 	const root = Path.resolve(config.path || 'python');
 
 	if (!Fs.existsSync(root))
 		throw new FusionError('NOT_FOUND', 'The Python components directory "' + root + '" does not exist. Create it or set it with fusion.configure({ python: { path: \'...\' } })');
+
+	return root;
+}
+
+exports.create = function(config) {
+
+	const python = interpreter(config);
+	const root = components(config);
+	const args = [WORKER, '--path', root];
+
+	if (config.preload && config.preload.length)
+		args.push('--preload', [].concat(config.preload).join(','));
 
 	return new Pool({
 		name: 'python',
@@ -38,6 +49,29 @@ exports.create = function(config) {
 		cancelGrace: config.cancelGrace,
 		forwardStderr: config.forwardStderr,
 		hint: 'Python interpreter "' + python + '" not found. Install Python 3.9+ or set `python`, `venv` or TOTALFUSION_PYTHON',
-		spawn: () => spawn(python, [WORKER, '--path', root], { cwd: root, env: config.env || process.env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
+		spawn: () => spawn(python, args, { cwd: root, env: config.env || process.env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
+	});
+};
+
+// Reads the @action contracts of the components with a one-shot process. Nothing is imported or executed.
+// Resolves { actions: [{ fn, module, name, async, doc, meta }], startups: [module], errors: [] }
+exports.describe = function(config) {
+
+	const python = interpreter(config);
+	const root = components(config);
+
+	return new Promise(function(resolve, reject) {
+		execFile(python, [WORKER, '--path', root, '--describe'], { cwd: root, env: config.env || process.env, maxBuffer: 16 * 1024 * 1024, windowsHide: true }, function(err, stdout, stderr) {
+
+			if (err) {
+				return reject(new FusionError(err.code === 'ENOENT' ? 'SPAWN_FAILED' : 'START_FAILED', 'Cannot describe the Python components: ' + err.message + (stderr ? '\n' + stderr : ''), { cause: err }));
+			}
+
+			try {
+				resolve(JSON.parse(stdout));
+			} catch (e) {
+				reject(new FusionError('START_FAILED', 'Invalid output from the Python describe process: ' + e.message));
+			}
+		});
 	});
 };

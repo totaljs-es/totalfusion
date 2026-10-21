@@ -32,6 +32,7 @@ fusion.configure({
         path: './python',      // directory with your components (default: ./python)
         workers: 4,            // pool size, started on demand (default: 1)
         timeout: 30000,        // ms per call, 0 disables (default: 30000)
+        preload: ['classifier'], // modules to import (and run @startup) before a worker is ready
         maxQueue: 1000,        // pending calls before QUEUE_FULL (default: 1000)
         venv: './.venv'        // use the interpreter of a virtual environment
     }
@@ -54,6 +55,46 @@ A component is a Python module inside `path`. Every public function defined in i
 - Names starting with `_` and names imported from other modules are not callable.
 - Modules outside `path` (standard library, site-packages) cannot be called. Import them from your own component instead.
 - `print()` and anything written to stdout goes to stderr, so it never breaks the protocol.
+
+### Contracts and hooks
+
+```python
+from totalfusion import action, startup, shutdown
+
+model = None
+
+@startup
+def load():                       # once per worker, right after the module is imported
+    global model
+    model = load_my_model()
+
+@shutdown
+def unload():                     # when the worker stops gracefully (1.5 s at most)
+    model.close()
+
+@action(summary='Classifies a text', input='*text:String // Text to classify', output='label:String', mcp=True)
+def classify(data):
+    return { 'label': model.predict(data['text']) }
+```
+
+`@action` declares the contract: `summary`, `input`, `output` (Total.js schema syntax), `mcp`, `permissions`, `timeout` and `name`/`id`. Its arguments are read **statically** (they must be literals), so `fusion.describe('python')` lists every contract without importing your code and without loading any model.
+
+`@startup` and `@shutdown` can be `def` or `async def`. To load a model **before** the worker reports ready (so the first call is not slow), name the module in `preload`: `fusion.configure({ python: { preload: ['classifier'] } })`. A module that cannot be preloaded fails the start with the real traceback in `err.stderr`.
+
+### Total.js 5
+
+```js
+const { register } = require('totalfusion/total5');
+
+await register({ python: { path: PATH.root('python'), workers: 2 } });
+```
+
+Every function decorated with `@action` becomes a `NEWACTION()` named `<module>/<function>` (change it with `prefix` or `@action(id=...)`). Because they are normal actions they work with `ACTION()`, `API` routes and FlowStream. `register` also adds the modules with `@startup` to `preload` automatically.
+
+- **Validation first.** Total.js validates `input` with the contract before Python runs, so invalid data never reaches your function.
+- **MCP is opt-in.** Only functions with `mcp=True` are exposed to agents (`CONF.$mcp = true` enables the endpoint). Everything else stays internal.
+- **Errors.** A Python `ValueError` is treated as the caller's mistake and its message reaches the client. Any other exception returns `The action failed`, and the real error goes to `onerror` (default: `console.error`), so paths, queries or secrets inside exception messages are not leaked.
+- Needs a Total.js 5 version that includes `mcp.js` for the MCP part (the actions work with any `total5`).
 
 ### Errors
 
@@ -86,6 +127,8 @@ Measured on one machine (Python 3.15, Node 24, macOS arm64), warm workers, JSON 
 | TotalFusion, small call | 0.07 ms | 0.12 ms |
 | TotalFusion, 1 MB payload round trip | 3.0 ms | 4.4 ms |
 | TotalFusion, 32 MB payload round trip | 104 ms | 120 ms |
+
+With a real library (NumPy in a virtual environment, nearest neighbours over 50,000 vectors of 128 dimensions, see [examples/components/vectors.py](examples/components/vectors.py)): the worker starts and builds the index once (about 145 ms with a warm disk cache), then every call takes about 3 ms (p50), against about 98 ms when a process is spawned per call.
 
 Throughput with 4 workers and trivial calls: about 23,000 calls/s. These numbers are a starting point, not a benchmark suite. Large binary payloads currently go through JSON, and a dedicated binary channel is planned.
 
