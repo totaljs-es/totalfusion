@@ -38,7 +38,7 @@ describe('describe', function() {
 	});
 
 	test('finds the modules with a @startup hook', async function() {
-		assert.deepEqual((await create().describe('python')).startups, ['contract']);
+		assert.deepEqual((await create().describe('python')).startups, ['contract', 'slow']);
 	});
 
 	test('never imports the components', async function() {
@@ -55,6 +55,24 @@ describe('describe', function() {
 
 	test('a missing interpreter gives a clear error', async function() {
 		await assert.rejects(() => create({ python: '/nonexistent/python' }).describe('python'), { code: 'SPAWN_FAILED' });
+	});
+
+});
+
+describe('lint', function() {
+
+	const { lint } = require('../total5');
+
+	test('warns about a comma inside a // comment, which Total.js reads as a new field', function() {
+		assert.equal(lint('a/b', { input: '*text:String // Text, up to 2000 chars' }).length, 1);
+		assert.equal(lint('a/b', { output: 'x:Number // one\ny:Number // two, three' }).length, 1);
+	});
+
+	test('accepts parentheses, new lines and plain commas between fields', function() {
+		assert.deepEqual(lint('a/b', { input: '*text:String // Text (up to 2000 chars)' }), []);
+		assert.deepEqual(lint('a/b', { input: 'a:String // one\nb:Number // two' }), []);
+		assert.deepEqual(lint('a/b', { input: 'a:String,b:Number' }), []);
+		assert.deepEqual(lint('a/b', {}), []);
 	});
 
 });
@@ -80,6 +98,31 @@ describe('hooks', function() {
 		const state = await fusion.python('contract.loaded');
 		assert.equal(state.loaded, 1);
 		assert.ok(state.pid > 0);
+	});
+
+	test('without preload the model load counts against the first call, with preload it does not', async function() {
+
+		const lazy = create({ timeout: 300 });
+		await assert.rejects(() => lazy.python('slow.add_one', { a: 1 }), { code: 'TIMEOUT' });
+
+		const preloaded = create({ timeout: 300, preload: ['slow'] });
+		assert.equal(await preloaded.python('slow.add_one', { a: 1 }), 2);
+	});
+
+	test('warmup starts every worker and waits until the models are loaded', async function() {
+		const fusion = create({ workers: 2, preload: ['slow'] });
+		const started = Date.now();
+		await fusion.warmup('python');
+		assert.ok(Date.now() - started >= 700);
+		assert.equal(fusion.stats().python.ready, 2);
+		const call = Date.now();
+		assert.equal(await fusion.python('slow.add_one', { a: 1 }), 2);
+		assert.ok(Date.now() - call < 300);
+	});
+
+	test('warmup rejects with the real reason when a worker cannot start', async function() {
+		const fusion = create({ preload: ['does_not_exist'] });
+		await assert.rejects(() => fusion.warmup('python'), { code: 'START_FAILED' });
 	});
 
 	test('a component that cannot be preloaded fails to start with the real reason', async function() {

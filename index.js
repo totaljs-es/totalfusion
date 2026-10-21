@@ -19,6 +19,7 @@ class Fusion {
 		this.call = this.call.bind(this);
 		this.python = this.python.bind(this);
 		this.describe = this.describe.bind(this);
+		this.warmup = this.warmup.bind(this);
 		this.stats = this.stats.bind(this);
 		this.shutdown = this.shutdown.bind(this);
 
@@ -45,24 +46,36 @@ class Fusion {
 
 	// fusion.call('python', 'analyzer.analyze', { text: 'Hello' }, { timeout: 5000, signal })
 	call(runtime, fn, args, options) {
+		try {
+			return this.pool(runtime).call(fn, args, options);
+		} catch (err) {
+			return Promise.reject(err);
+		}
+	}
+
+	// Starts all the workers of a runtime and waits until they are ready (models loaded), so the first request is not slow
+	warmup(runtime) {
+		try {
+			return this.pool(runtime).warmup();
+		} catch (err) {
+			return Promise.reject(err);
+		}
+	}
+
+	pool(runtime) {
 
 		let pool = this.pools.get(runtime);
 
 		if (!pool) {
 
 			if (!ADAPTERS[runtime])
-				return Promise.reject(new FusionError('NOT_FOUND', 'Unknown runtime "' + runtime + '"'));
+				throw new FusionError('NOT_FOUND', 'Unknown runtime "' + runtime + '"');
 
-			try {
-				pool = ADAPTERS[runtime]().create(this.config[runtime] || {});
-			} catch (err) {
-				return Promise.reject(err);
-			}
-
+			pool = ADAPTERS[runtime]().create(this.config[runtime] || {});
 			this.pools.set(runtime, pool);
 		}
 
-		return pool.call(fn, args, options);
+		return pool;
 	}
 
 	python(fn, args, options) {

@@ -69,9 +69,16 @@ def hooks(module, attribute):
 
 
 async def invoke(fn, *args):
-    result = fn(*args)
+    """Sync hooks run in a thread so a long model load does not block the worker's event loop."""
+
+    if inspect.iscoroutinefunction(fn):
+        return await fn(*args)
+
+    result = await asyncio.get_running_loop().run_in_executor(executor, fn, *args)
+
     if inspect.isawaitable(result):
         result = await result
+
     return result
 
 

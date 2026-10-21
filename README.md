@@ -81,6 +81,25 @@ def classify(data):
 
 `@startup` and `@shutdown` can be `def` or `async def`. To load a model **before** the worker reports ready (so the first call is not slow), name the module in `preload`: `fusion.configure({ python: { preload: ['classifier'] } })`. A module that cannot be preloaded fails the start with the real traceback in `err.stderr`.
 
+### Models and memory
+
+Every worker is a separate process with **its own copy of the model**, so memory grows with `workers`. Measured on a MacBook (8 cores, Python 3.12, physical footprint from `footprint`, not `ps`, which under-reports compressed memory on macOS):
+
+| Model | Per worker | 1 worker | 2 workers | 4 workers |
+|---|---|---|---|---|
+| scikit-learn random forest ([classifier.py](examples/components/classifier.py)) | 129 MB | 150 calls/s | - | 554 calls/s (516 MB) |
+| DistilBERT sentiment with PyTorch ([sentiment.py](examples/components/sentiment.py)) | 1.35 GB | 186 calls/s | 274-309 calls/s (2.7 GB) | 334-366 calls/s (5.4 GB) |
+
+The DistilBERT call takes about 5-7 ms for a sentence and 25 ms for 1,900 characters. A worker is ready in about 2.5 s (PyTorch import plus the model, from a warm disk cache), against 2.7-3.3 s **per call** when a process is spawned each time.
+
+What to do with it:
+
+- **Small models:** one worker per core you want to use scales almost linearly.
+- **Large models:** start with `workers: 1` or `2`. PyTorch already uses several threads inside one process, so four workers gave +20% throughput over two for twice the memory. Setting `OMP_NUM_THREADS` through the `env` option did not change that noticeably.
+- **Use `preload`.** The `timeout` of a call starts when it is sent to a worker, so a model loaded lazily on the first call would count its loading time against that call. With `preload` the worker reports ready only after loading, and the load has its own limit (`startTimeout`, 30 s by default, raise it for big models).
+- **Use `warmup`.** Workers start with the first call. `await fusion.warmup('python')` (or `register({ warmup: true })`) starts them all at boot, so the first request does not wait for the model: the first request through MCP went from 2.4 s to about 22 ms (later ones take 9-12 ms), with the boot taking the 2.6 s instead.
+- **Keep input shapes fixed.** PyTorch on CPU prepares its kernels per tensor shape, and the first call with each new sequence length took 130-250 ms. Padding to a fixed length in `@startup` and in the function removed every slow call (40 different sentences, all between 7 and 9 ms). See [sentiment.py](examples/components/sentiment.py).
+
 ### Total.js 5
 
 ```js
@@ -94,6 +113,8 @@ Every function decorated with `@action` becomes a `NEWACTION()` named `<module>/
 - **Validation first.** Total.js validates `input` with the contract before Python runs, so invalid data never reaches your function.
 - **MCP is opt-in.** Only functions with `mcp=True` are exposed to agents (`CONF.$mcp = true` enables the endpoint). Everything else stays internal.
 - **Errors.** A Python `ValueError` is treated as the caller's mistake and its message reaches the client. Any other exception returns `The action failed`, and the real error goes to `onerror` (default: `console.error`), so paths, queries or secrets inside exception messages are not leaked.
+- **Boot.** `register({ warmup: true })` loads the models before it resolves, and `preload: false` leaves the modules with `@startup` to load on their first call.
+- **Schemas.** Total.js splits the fields of a schema on commas **even inside a `// comment`**, so `'*text:String // Text, up to 2000 chars'` declares a second field called `up to 2000 chars`. `register` returns a `warnings` list for it: use parentheses or a new line.
 - Needs a Total.js 5 version that includes `mcp.js` for the MCP part (the actions work with any `total5`).
 
 ### Errors

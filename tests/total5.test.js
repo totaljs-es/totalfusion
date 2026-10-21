@@ -31,8 +31,9 @@ test('registers @action functions as Total.js 5 actions and MCP tools', { skip: 
 
 	const report = JSON.parse(result.stdout.toString().trim().split('\n').pop());
 
-	assert.deepEqual(report.registered.ids.sort(), ['contract/bare', 'contract/count', 'contract/double', 'contract/explode', 'contract/reject']);
+	assert.deepEqual(report.registered.ids.sort(), ['contract/bare', 'contract/count', 'contract/double', 'contract/explode', 'contract/reject', 'slow/add_one']);
 	assert.deepEqual(report.registered.errors, []);
+	assert.deepEqual(report.registered.warnings, []);
 
 	// Python runs behind the action and the result is returned as is
 	assert.deepEqual(report.count, { ok: true, output: { words: 4 } });
