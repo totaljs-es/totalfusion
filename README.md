@@ -46,6 +46,9 @@ fusion.configure({
         timeout: 30000,        // ms per call, 0 disables (default: 30000)
         preload: ['classifier'], // modules to import (and run @startup) before a worker is ready
         maxQueue: 1000,        // pending calls before QUEUE_FULL (default: 1000)
+        maxCalls: 5000,        // replace a worker after this many calls (default: never)
+        maxMemory: '2gb',      // replace a worker that uses more than this (default: no limit)
+        healthInterval: 10000, // ping idle workers every N ms, 0 disables (default: 10000)
         venv: './.venv'        // use the interpreter of a virtual environment
     }
 });
@@ -209,6 +212,27 @@ ROUTE('GET /generate/', function($) {
 ```
 
 `fusion.sse($, stream)` sends every chunk as `data: <json>`, the end as `event: end` and a failure as `event: error`. If the browser disconnects, the generator is cancelled, so a model does not keep generating for nobody. As in the actions, only the message of a `ValueError` reaches the client.
+
+### Keeping workers healthy
+
+Libraries for machine learning tend to leak memory, and a process can get stuck. Two mechanisms keep the pool in shape, and neither makes a call fail.
+
+**Recycling.** A worker is replaced after `maxCalls` calls or as soon as it uses more than `maxMemory` (`512`, `'512mb'`, `'1.5gb'`). The replacement **starts first**; the old worker keeps serving until the replacement is ready, then it leaves as soon as it is idle (its `@shutdown` hooks run). With a single worker and a model that takes seconds to load, nobody waits for the restart. The limits are therefore soft: the old worker may serve a few more calls while the replacement loads, and for a moment two workers exist, so allow for that memory. If the replacement cannot start, the old worker stays and no new attempt is made for a minute.
+
+With the DistilBERT worker of 1.35 GB and `maxCalls: 100`, 450 calls were served with two replacements: the slowest call took 32 ms (no stall while a new worker loaded the model), the pool peaked at 2.7 GB with both workers alive and went back to 1.35 GB. The median rose from 5-7 ms to 16 ms while a worker was loading, because both compete for the CPU.
+
+Memory is the resident size on Linux and the physical footprint on macOS (the value Activity Monitor shows, compressed memory included). On other systems it is not reported, `maxMemory` has no effect and Node.js emits a warning.
+
+**Health check.** Every `healthInterval` (10 s by default) idle workers get a ping. One that does not answer within `healthTimeout` (10 s) is killed and replaced at once, so the next call does not wait for a model to load. Only idle workers are checked: a busy worker is protected by the `timeout` of its call, and a long computation that holds the GIL is never mistaken for a dead worker.
+
+`fusion.stats()` shows what is going on:
+
+```js
+fusion.stats().python
+// { workers: 1, ready: 1, busy: 0, queued: 0,
+//   recycled: { calls: 2, memory: 0 }, unresponsive: 0,
+//   details: [{ pid: 67025, ready: true, busy: false, calls: 32, memory: 1417674752, age: 6120, recycling: false }] }
+```
 
 ### Errors
 

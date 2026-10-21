@@ -47,6 +47,10 @@ exports.create = function(config) {
 		maxQueue: config.maxQueue,
 		startTimeout: config.startTimeout,
 		cancelGrace: config.cancelGrace,
+		maxCalls: config.maxCalls,
+		maxMemory: config.maxMemory,
+		healthInterval: config.healthInterval,
+		healthTimeout: config.healthTimeout,
 		forwardStderr: config.forwardStderr,
 		hint: 'Python interpreter "' + python + '" not found. Install Python 3.9+ or set `python`, `venv` or TOTALFUSION_PYTHON',
 		spawn: () => spawn(python, args, { cwd: root, env: config.env || process.env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })

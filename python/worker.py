@@ -10,6 +10,7 @@ Standard library only.
 import array
 import ast
 import asyncio
+import ctypes
 import importlib
 import inspect
 import json
@@ -82,6 +83,30 @@ def pack(obj, parts):
     return {'$bin': len(parts) - 1, 'type': name}
 
 
+def memory():
+    """Memory of this process in bytes, or None when the platform does not allow to know it.
+
+    Linux: resident set size. macOS: physical footprint (the number Activity Monitor shows, it includes
+    compressed memory, which `ps` leaves out). Other systems: unknown.
+    """
+
+    try:
+        if sys.platform.startswith('linux'):
+            with open('/proc/self/statm') as f:
+                return int(f.read().split()[1]) * os.sysconf('SC_PAGE_SIZE')
+
+        if sys.platform == 'darwin':
+            # struct rusage_info_v0: the physical footprint is the 10th 64 bits field
+            libproc = ctypes.CDLL('/usr/lib/libproc.dylib')
+            info = (ctypes.c_uint64 * 20)()
+            if libproc.proc_pid_rusage(os.getpid(), 0, ctypes.byref(info)) == 0:
+                return int(info[9])
+    except Exception:
+        pass
+
+    return None
+
+
 def send(message):
 
     parts = []
@@ -141,7 +166,7 @@ def fail(id, name, message, code=None, tb=None):
         error['code'] = code
     if tb:
         error['traceback'] = tb
-    send({'t': 'res', 'id': id, 'ok': False, 'error': error})
+    send({'t': 'res', 'id': id, 'ok': False, 'error': error, 'mem': memory()})
 
 
 def hooks(module, attribute):
@@ -394,7 +419,7 @@ async def run(loop, message):
 
         if message.get('stream'):
             await stream_items(loop, id, entry, fn, message.get('args'))
-            send({'t': 'res', 'id': id, 'ok': True, 'data': None})
+            send({'t': 'res', 'id': id, 'ok': True, 'data': None, 'mem': memory()})
             return
 
         if generator:
@@ -408,7 +433,7 @@ async def run(loop, message):
             result = await loop.run_in_executor(executor, fn, message.get('args'))
 
         try:
-            send({'t': 'res', 'id': id, 'ok': True, 'data': result})
+            send({'t': 'res', 'id': id, 'ok': True, 'data': result, 'mem': memory()})
         except (TypeError, ValueError) as e:
             fail(id, type(e).__name__, 'The result cannot be serialized to JSON: %s' % e, 'NOT_SERIALIZABLE')
 
@@ -445,7 +470,7 @@ def dispatch(loop, message):
             if entry['async']:
                 entry['task'].cancel()
     elif kind == 'ping':
-        send({'t': 'pong', 'id': message.get('id')})
+        send({'t': 'pong', 'id': message.get('id'), 'mem': memory()})
     elif kind == 'bye':
         stop(loop)
 
