@@ -21,7 +21,8 @@ function prose(file) {
 	let fenced = false;
 	const lines = [];
 
-	for (const line of Fs.readFileSync(Path.join(ROOT, file), 'utf8').split('\n')) {
+	// A checkout on Windows has CRLF line endings
+	for (const line of Fs.readFileSync(Path.join(ROOT, file), 'utf8').split(/\r?\n/)) {
 		if (line.startsWith('```'))
 			fenced = !fenced;
 		else if (!fenced)
