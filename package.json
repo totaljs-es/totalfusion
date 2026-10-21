@@ -1,0 +1,19 @@
+{
+	"name": "totalfusion",
+	"version": "0.0.1",
+	"description": "Typed, supervised workers for Node.js. Call Python (and more) as async functions.",
+	"main": "index.js",
+	"private": true,
+	"license": "MIT",
+	"engines": {
+		"node": ">=20"
+	},
+	"files": [
+		"index.js",
+		"lib",
+		"python"
+	],
+	"scripts": {
+		"test": "node --test tests/*.test.js"
+	}
+}
