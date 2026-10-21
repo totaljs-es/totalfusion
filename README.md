@@ -88,19 +88,19 @@ All of them run from a clone of the repository:
 
 ## Status
 
-Version 0.1.0, not published. What the test suite (more than 240 tests, more than 180 of them without Rust) has been run against:
+Version 0.1.0, not published. The whole test suite (more than 240 tests, more than 180 of them without Rust) **passes in GitHub Actions on Linux, macOS and Windows**, and it was run locally on macOS as well:
 
-| | |
+| | Where it has run |
 |---|---|
-| Node.js | 20, 22, 24 |
-| Python | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.15 |
-| Rust | 1.99 (the `totalfusion` crate and its worker) |
-| Total.js | `total5` 0.0.19 from npm and the 0.0.20 development version |
-| macOS (Apple silicon) | Verified locally and in GitHub Actions |
-| Linux | Verified in GitHub Actions (Ubuntu) |
-| Windows | In the first run of GitHub Actions every test passed but one: an executable cannot be overwritten while it runs. That was fixed (a Rust worker runs from a copy on Windows) and has **not been confirmed yet** |
+| Linux | GitHub Actions on Ubuntu: Node.js 20, 22 and 24 with Python 3.9 to 3.14 |
+| macOS | GitHub Actions (Node.js 24, Python 3.12) and locally on Apple silicon (Node.js 20, 22 and 24, Python 3.9 to 3.15) |
+| Windows | GitHub Actions (Node.js 24, Python 3.12): the whole suite, including the binary pipes, the memory of a worker and the Rust workers |
+| Rust | The stable toolchain of the runners, and 1.99 locally (the `totalfusion` crate and its worker) |
+| Total.js | `total5` from npm in GitHub Actions, and also the 0.0.20 development version locally |
 
-Not verified: the FlowStream component inside the Flow designer (it was run with the test harness of Total.js), and Go, which does not exist. The workflow is [.github/workflows/test.yml](.github/workflows/test.yml).
+Python 3.15 and the combinations that are not in the matrix of [.github/workflows/test.yml](.github/workflows/test.yml) were run only locally.
+
+Not verified: the FlowStream component inside the Flow designer (it was run with the test harness of Total.js), and Go, which does not exist.
 
 ## Contributing
 

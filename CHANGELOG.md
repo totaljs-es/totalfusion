@@ -20,4 +20,4 @@ The first version.
 - **Development:** `fusion.watch()` replaces the workers when the code changes, and with Total.js the contracts are read again.
 - **Diagnosis:** `fusion.doctor()` and `npx totalfusion doctor` check the interpreter (or the Rust binary), the components, the libraries and `requirements.txt` without importing or installing anything, and the errors at run time say how to install a missing library.
 
-Verified on macOS (Apple silicon) with Node.js 20, 22 and 24, Python 3.9 to 3.15 and Rust 1.99. The code for Windows (binary pipes, memory of a worker, the standard output of a Rust worker) is written and the Rust crate compiles for Windows and Linux, but Linux and Windows have not been run yet.
+Verified in GitHub Actions on Linux (Ubuntu), macOS and Windows, and locally on macOS (Apple silicon) with Node.js 20, 22 and 24, Python 3.9 to 3.15 and Rust 1.99. Not verified: the FlowStream component inside the Flow designer.

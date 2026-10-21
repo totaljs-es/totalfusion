@@ -53,7 +53,7 @@ The methods that describe a function apply to the function registered just befor
 
 ## Do not print to the standard output
 
-It carries the protocol. On Unix and on Windows the crate redirects it to the error output for you, so `println!` is harmless, but use `eprintln!` to be safe everywhere. (The Windows code compiles but has not been run on Windows yet.)
+It carries the protocol. On Unix and on Windows the crate redirects it to the error output for you, so `println!` is harmless, but use `eprintln!` to be safe everywhere. (This is tested on Windows in the continuous integration of the project.)
 
 ## Rebuilding while the application runs
 

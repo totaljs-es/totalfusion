@@ -37,7 +37,7 @@ Libraries for machine learning tend to leak memory, and a process can get stuck.
 
 With the DistilBERT worker of 1.35 GB and `maxCalls: 100`, 450 calls were served with two replacements: the slowest call took 32 ms (no stall while a new worker loaded the model), the pool peaked at 2.7 GB with both workers alive and went back to 1.35 GB. The median rose from 5-7 ms to 16 ms while a worker was loading, because both compete for the CPU.
 
-Memory is the resident size on Linux, the physical footprint on macOS (the value Activity Monitor shows, compressed memory included) and the private bytes on Windows (not verified there). On other systems it is not reported, `maxMemory` has no effect and Node.js emits a warning.
+Memory is the resident size on Linux, the physical footprint on macOS (the value Activity Monitor shows, compressed memory included) and the private bytes on Windows (the tests that check it run on all three systems). On other systems it is not reported, `maxMemory` has no effect and Node.js emits a warning.
 
 **Health check.** Every `healthInterval` (10 s by default) idle workers get a ping. One that does not answer within `healthTimeout` (10 s) is killed and replaced at once, so the next call does not wait for a model to load. Only idle workers are checked: a busy worker is protected by the `timeout` of its call, and a long computation that holds the GIL is never mistaken for a dead worker.
 
