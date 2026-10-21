@@ -195,6 +195,19 @@ describe('health', function() {
 		assert.ok(Date.now() - started < 3000);
 	});
 
+	test('a call is never given to a worker that was just killed, before its exit is noticed', async function() {
+
+		const fusion = create({ healthInterval: 0 });
+		const dying = await fusion.python('health.pid');
+		const pool = fusion.pools.get('python');
+
+		// What the health check does: the kill is sent and the exit arrives later, and on Windows later is a while
+		pool.killWorker(pool.workers[0]);
+
+		const pid = await fusion.python('health.pid');
+		assert.notEqual(pid, dying);
+	});
+
 	test('a healthy idle worker is left alone', async function() {
 		const fusion = create({ healthInterval: 100, healthTimeout: 500 });
 		const pid = await fusion.python('health.pid');
