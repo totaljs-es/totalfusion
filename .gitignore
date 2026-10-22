@@ -158,3 +158,4 @@ rust/Cargo.lock
 # Python bytecode, written next to the code when it runs
 __pycache__/
 *.pyc
+.DS_Store
