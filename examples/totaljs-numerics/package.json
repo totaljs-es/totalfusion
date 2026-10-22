@@ -1,0 +1,13 @@
+{
+	"name": "totalfusion-numerics-example",
+	"private": true,
+	"description": "Total.js 5 actions backed by NumPy and Rust, with binary array transfer",
+	"scripts": {
+		"start": "node index.js",
+		"verify": "node verify.js"
+	},
+	"dependencies": {
+		"total5": "latest",
+		"totalfusion": "file:../.."
+	}
+}

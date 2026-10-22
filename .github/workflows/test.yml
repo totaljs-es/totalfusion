@@ -39,11 +39,16 @@ jobs:
       # (the MCP checks are skipped when it does not include the MCP router).
       - run: npm install --no-save total5
 
+      - name: Install NumPy
+        run: python -m pip install "numpy>=1.23,<3"
+
       # The crate of the Rust workers. The runners already have the stable toolchain.
       - run: cargo test --manifest-path rust/Cargo.toml
 
       # Builds the Rust worker of the tests and runs everything. The log is kept to find out what failed.
       - name: npm test
+        env:
+          TOTALFUSION_TEST_NUMPY: python
         shell: bash
         run: |
           set -o pipefail

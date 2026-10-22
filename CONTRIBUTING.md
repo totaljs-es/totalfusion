@@ -13,6 +13,16 @@ cargo test --manifest-path rust/Cargo.toml        # the crate
 
 Run the tests with `PYTHONDONTWRITEBYTECODE` **unset** as well (`env -u PYTHONDONTWRITEBYTECODE npm test`): some environments set it, and then Python never writes the bytecode that every CI runner does write. A bug of that kind hid from us for a long time.
 
+To enable NumPy locally, create a virtual environment and run:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r examples/totaljs-numerics/requirements.txt
+TOTALFUSION_TEST_NUMPY="$PWD/.venv/bin/python" npm test
+```
+
+CI installs NumPy for each Python version and enables these tests too.
+
 The documentation is tested too (`tests/docs.test.js` checks that every link and anchor leads somewhere and that every page is reachable from `docs/README.md`), so change it together with the code.
 
 A change should come with tests. When you fix something, check that the test fails without the fix.

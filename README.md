@@ -89,6 +89,7 @@ All of them run from a clone of the repository:
 | | |
 |---|---|
 | [examples/totaljs-app](examples/totaljs-app) | A Total.js 5 application with Python: actions, an API route, Server-Sent Events and reload on edit. `npm install && npm start`. |
+| [examples/totaljs-numerics](examples/totaljs-numerics) | Total.js 5 with NumPy statistics, a Rust Action and binary typed arrays. |
 | [examples/basic.js](examples/basic.js) | `fusion.python()` in any Node.js program. |
 | [examples/streaming.js](examples/streaming.js) | A Python generator as an async iterable, and cancelling it. |
 | [examples/rust.js](examples/rust.js) | The Rust worker of [examples/rust](examples/rust) (build it first with `cargo build --release`). |

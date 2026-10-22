@@ -159,3 +159,6 @@ rust/Cargo.lock
 __pycache__/
 *.pyc
 .DS_Store
+
+# Local numerical example environment
+.venv/
