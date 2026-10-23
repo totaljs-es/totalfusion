@@ -35,13 +35,13 @@ test('everything the code needs is in the package', function() {
 	}
 
 	// The workers and what they read
-	for (const needed of ['python/worker.py', 'python/pip-names.json', 'python/sdk/totalfusion.py', 'rust/Cargo.toml', 'rust/src/lib.rs', 'bin/totalfusion.js', 'total5/flow/python.html', 'LICENSE', 'README.md', 'CHANGELOG.md'])
+	for (const needed of ['python/worker.py', 'python/pip-names.json', 'python/sdk/totalfusion.py', 'rust/Cargo.toml', 'rust/src/lib.rs', 'go/go.mod', 'go/app.go', 'go/index.js', 'bin/totalfusion.js', 'total5/flow/python.html', 'LICENSE', 'README.md', 'CHANGELOG.md'])
 		assert.ok(files.has(needed), needed + ' is not in the package');
 });
 
 test('the package does not ship tests, examples or build output', function() {
 	const files = pack();
-	assert.deepEqual(files.filter(file => /^(tests|examples|\.github)\/|target\/|node_modules\/|__pycache__\/|\.pyc$|Cargo\.lock$/.test(file)), []);
+	assert.deepEqual(files.filter(file => /^(tests|examples|\.github)\/|target\/|node_modules\/|__pycache__\/|\.pyc$|Cargo\.lock$|_test\.go$/.test(file)), []);
 });
 
 test('Python bytecode that is lying around does not get into the package', function() {
@@ -67,6 +67,12 @@ test('the version of the package and of the crate are the same', function() {
 	const version = JSON.parse(Fs.readFileSync(Path.join(ROOT, 'package.json'), 'utf8')).version;
 	const crate = /^version = "([^"]+)"/m.exec(Fs.readFileSync(Path.join(ROOT, 'rust', 'Cargo.toml'), 'utf8'))[1];
 	assert.equal(crate, version);
+});
+
+test('the version of the package and of the Go module are the same', function() {
+	const version = JSON.parse(Fs.readFileSync(Path.join(ROOT, 'package.json'), 'utf8')).version;
+	const module = /^const Version = "([^"]+)"/m.exec(Fs.readFileSync(Path.join(ROOT, 'go', 'app.go'), 'utf8'))[1];
+	assert.equal(module, version);
 });
 
 test('the command is executable code with a shebang', function() {

@@ -2,20 +2,20 @@
 
 ```
   Your code: a Total.js action, an API route, a Flow, or any Node.js program
-        |   fusion.python(...)   fusion.rust(...)   fusion.stream(...)
+        |   fusion.python(...)   fusion.rust(...)   fusion.go(...)   fusion.stream(...)
         v
   TotalFusion, in your Node.js process
         pool of workers, queue, timeouts, cancellation, recycling, health check, events
         |   frames over the standard input and output: JSON plus raw binary parts
         v
   A worker process, one of many
-        Python (python/worker.py)  or  Rust (the totalfusion crate)
+        Python (python/worker.py), Rust (the totalfusion crate) or Go (the totalfusion module)
         |
         v
   Your function
 ```
 
-Each worker is a process (Python, or a Rust binary) that talks to Node.js over stdin/stdout with length-prefixed frames (protocol version 2: JSON for the structure plus raw binary parts, see [lib/protocol.js](../lib/protocol.js)). Calls carry an id, so responses never mix under concurrency. Workers start on demand, are replaced when they crash, exit when the parent dies and do not keep your Node.js process alive while idle.
+Each worker is a process (Python, or a Rust or Go binary) that talks to Node.js over stdin/stdout with length-prefixed frames (protocol version 2: JSON for the structure plus raw binary parts, see [lib/protocol.js](../lib/protocol.js)). Calls carry an id, so responses never mix under concurrency. Workers start on demand, are replaced when they crash, exit when the parent dies and do not keep your Node.js process alive while idle.
 
 Measured on one machine (Python 3.15, Node 24, macOS arm64), warm workers, JSON payloads:
 
@@ -41,11 +41,11 @@ Every message is a frame (all the integers are `uint32`, big endian):
 total | json length | json | count | length of each part | the parts
 ```
 
-The JSON holds the structure of the message and the binary data travels raw after it, referenced from the JSON as `{ "$bin": index, "type": "Float32Array" }`. The messages are `call`, `cancel`, `credit` (backpressure), `ping` and `bye` from Node.js, and `ready`, `chunk`, `res` and `pong` from the worker. The details are in [lib/protocol.js](../lib/protocol.js) and in the comments of the worker of each language; the Python and the Rust worker speak exactly the same protocol, which is why every feature works with both.
+The JSON holds the structure of the message and the binary data travels raw after it, referenced from the JSON as `{ "$bin": index, "type": "Float32Array" }`. The messages are `call`, `cancel`, `credit` (backpressure), `ping` and `bye` from Node.js, and `ready`, `chunk`, `res` and `pong` from the worker. The details are in [lib/protocol.js](../lib/protocol.js) and in the comments of the worker of each language; the Python, the Rust and the Go worker speak exactly the same protocol, which is why every feature works with all of them.
 
 ## Contracts
 
-A function declares what it takes and returns with `@action(...)` in Python or `.input()`/`.output()`... in Rust. The contract is read without running anything: Python is read as text (an AST), and a Rust worker prints it with `--describe`. `fusion.describe(runtime)` returns it, and `fusion.register()` turns it into actions of Total.js.
+A function declares what it takes and returns with `@action(...)` in Python or `.input()`/`.output()`... in Rust and `.Input()`/`.Output()`... in Go. The contract is read without running anything: Python is read as text (an AST), and a Rust or Go worker prints it with `--describe`. `fusion.describe(runtime)` returns it, and `fusion.register()` turns it into actions of Total.js.
 
 ## Adding a runtime
 

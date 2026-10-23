@@ -8,7 +8,7 @@ TotalFusion is **not on npm yet**. From a clone of the repository, install it by
 npm install ../totalfusion          # or "totalfusion": "file:../totalfusion" in your package.json
 ```
 
-Once it is published it will be `npm install totalfusion`. You need Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. Rust is needed only to **build** a Rust worker, never to run one.
+Once it is published it will be `npm install totalfusion`. You need Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. Rust and Go are needed only to **build** a worker in that language, never to run one.
 
 ## 2. Your first function, in any Node.js program
 
@@ -68,7 +68,18 @@ await fusion.rust('collatz.longest', { limit: 3000000 });
 
 See [Rust](rust.md) and [examples/rust.js](../examples/rust.js).
 
-## 5. Check your setup
+## 5. Go
+
+If a function is network or infrastructure code, or you want one binary that you can build for any system, write it in Go and call it the same way:
+
+```js
+fusion.configure({ go: { binary: './worker/worker' } });
+await fusion.go('net.check', { host: 'example.com' });
+```
+
+See [Go](go.md) and [examples/go.js](../examples/go.js).
+
+## 6. Check your setup
 
 ```bash
 npx totalfusion doctor --path ./python
@@ -81,7 +92,7 @@ It tells you which libraries are missing and the exact command to install them i
 | If you want to... | Read |
 |---|---|
 | use machine learning or any Python library | [Python](python.md) |
-| run heavy work without blocking Node.js | [Rust](rust.md) |
+| run heavy work without blocking Node.js | [Rust](rust.md) or [Go](go.md) |
 | expose functions as actions, API routes, MCP tools | [Total.js 5](total5.md) |
 | send images, audio or arrays | [Binary data](binary-data.md) |
 | show a model's output as it is produced | [Streaming](streaming.md) |

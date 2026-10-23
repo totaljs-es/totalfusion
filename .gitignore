@@ -155,6 +155,10 @@ vite.config.ts.timestamp-*
 target/
 rust/Cargo.lock
 
+# Go build output of the examples
+/examples/go/worker
+/examples/go/worker.exe
+
 # Python bytecode, written next to the code when it runs
 __pycache__/
 *.pyc

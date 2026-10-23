@@ -45,7 +45,19 @@ jobs:
       # The crate of the Rust workers. The runners already have the stable toolchain.
       - run: cargo test --manifest-path rust/Cargo.toml
 
-      # Builds the Rust worker of the tests and runs everything. The log is kept to find out what failed.
+      # The module of the Go workers. The tests below build the Go worker of the tests with the same toolchain.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+
+      - run: go vet ./...
+        working-directory: go
+
+      - run: go test ./...
+        working-directory: go
+
+      # Builds the Rust and Go workers of the tests and runs everything. The log is kept to find out what failed.
       - name: npm test
         env:
           TOTALFUSION_TEST_NUMPY: python

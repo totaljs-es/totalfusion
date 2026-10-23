@@ -55,4 +55,28 @@ App::new()
 for await (const number of fusion.rust.stream('count.up', { n: 10 })) console.log(number);
 ```
 
-`emit` waits while the consumer has not read the chunks that the worker is allowed to run ahead (`highWaterMark`), and it fails with a cancelled error when the consumer leaves the loop, so `?` ends the stream. A function that is not a stream and is called with `stream()` is a stream of one chunk, as in Python. The measured behaviour (backpressure, cancellation, a consumer that stops reading) is the same for both runtimes: the tests run against both.
+`emit` waits while the consumer has not read the chunks that the worker is allowed to run ahead (`highWaterMark`), and it fails with a cancelled error when the consumer leaves the loop, so `?` ends the stream. A function that is not a stream and is called with `stream()` is a stream of one chunk, as in Python. The measured behaviour (backpressure, cancellation, a consumer that stops reading) is the same for every runtime: the tests run against all of them.
+
+## In Go
+
+A function registered with `app.Stream()` sends its chunks with `call.Emit(value)`:
+
+```go
+app.Stream("count.up", func(call *totalfusion.Call) error {
+	n, _ := call.Args.Get("n").AsInt()
+
+	for number := int64(0); number < n; number++ {
+		if err := call.Emit(number); err != nil { // waits if the consumer is slow, fails if it stops reading
+			return err
+		}
+	}
+
+	return nil
+})
+```
+
+```js
+for await (const number of fusion.go.stream('count.up', { n: 10 })) console.log(number);
+```
+
+`Emit` returns `totalfusion.ErrCancelled` when the consumer leaves the loop, so returning the error ends the stream. The context of the call (`call.Context()`) is cancelled at the same time.

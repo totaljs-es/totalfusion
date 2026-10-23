@@ -4,7 +4,7 @@ A runtime is a **pool of worker processes** that Node.js supervises. They are st
 
 ## Several calls at the same time
 
-By default a worker runs **one call at a time** and the work is spread over the processes. With `concurrency: N` each worker runs up to N calls at once, which is what you want when a call spends most of its time waiting, and for Rust, where every call runs in its own thread.
+By default a worker runs **one call at a time** and the work is spread over the processes. With `concurrency: N` each worker runs up to N calls at once, which is what you want when a call spends most of its time waiting, and for Rust and Go, where every call runs in its own thread or goroutine.
 
 ```js
 fusion.configure({ python: { workers: 1, concurrency: 64 } });   // 64 calls waiting for an API at once
@@ -24,7 +24,8 @@ fusion.configure({ rust: { binary, workers: 1, concurrency: 8 } });   // 8 threa
 - **The next call goes to the least loaded worker**, and a new worker is started only when the room of the existing ones is not enough.
 - **Python:** `async def` functions overlap, and `def` functions run in threads. Because of the GIL, pure-Python computation does not speed up that way (use more `workers` for it); waiting for a network, a disk or a library that releases the GIL does. Calls that overlap in a worker **share its module state**: a global that a function modifies is not safe unless you protect it.
 - **Rust:** the handlers must be `Send + Sync`, which the compiler checks. The calls of a worker share its memory, so one loaded model serves all of them.
-- **A call that cannot be cancelled costs the worker.** After a timeout the worker is asked to cancel the call; if it cannot (a `def` function in Python that does not return, a Rust function that never looks at `is_cancelled()`), the worker is killed after `cancelGrace` and **the calls that were running next to it fail** with `WORKER_CRASHED`. A crash does the same. Async functions in Python and functions that check `is_cancelled()` in Rust are cancelled alone.
+- **Go:** every call is a goroutine and they share the memory of the worker, so a function must be safe to run at the same time as itself (`go test -race` finds the mistakes). One loaded model serves all the calls.
+- **A call that cannot be cancelled costs the worker.** After a timeout the worker is asked to cancel the call; if it cannot (a `def` function in Python that does not return, a Rust or Go function that never looks at `is_cancelled()` or `Cancelled()`), the worker is killed after `cancelGrace` and **the calls that were running next to it fail** with `WORKER_CRASHED`. A crash does the same. Async functions in Python and functions that check `is_cancelled()` in Rust or `Cancelled()` in Go are cancelled alone.
 - **A stream keeps its slot until it ends.** A consumer that stops reading does not block the other calls of the worker, but it does hold one slot until the stream times out or is cancelled.
 - **Recycling and the health check wait for the calls in progress:** a worker that reaches `maxCalls` leaves when the last of its calls ends, and only workers with nothing running are pinged.
 - `fusion.stats()` shows `running` (calls in progress) for the pool and for every worker.
@@ -82,4 +83,4 @@ await fusion.python('prices.convert', data, { idempotent: true, retries: 3 });
 @action(summary='Converts a price', input='*amount:Number', idempotent=True)       # in the contract: Total.js does it for every call
 ```
 
-In Rust, `.idempotent(true)` after the function. The call runs again on another worker, first in the queue, up to `retries` times (default 1); then it fails with `WORKER_CRASHED` as usual. This is what saves the calls that were running next to a call that had to be killed (see [Several calls at the same time](workers.md#several-calls-at-the-same-time)). It does **not** repeat a call that timed out, one that failed with an error of its own, a stream, or anything while the pool shuts down, and a function that kills its worker every time costs `retries + 1` workers, no more. The timeout counts for every attempt.
+In Rust, `.idempotent(true)` after the function, and in Go `.Idempotent(true)`. The call runs again on another worker, first in the queue, up to `retries` times (default 1); then it fails with `WORKER_CRASHED` as usual. This is what saves the calls that were running next to a call that had to be killed (see [Several calls at the same time](workers.md#several-calls-at-the-same-time)). It does **not** repeat a call that timed out, one that failed with an error of its own, a stream, or anything while the pool shuts down, and a function that kills its worker every time costs `retries + 1` workers, no more. The timeout counts for every attempt.

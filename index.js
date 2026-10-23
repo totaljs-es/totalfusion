@@ -8,7 +8,8 @@ const { watch } = require('./lib/watch');
 // Adapters are loaded only when their runtime is used
 const ADAPTERS = {
 	python: () => require('./python'),
-	rust: () => require('./rust')
+	rust: () => require('./rust'),
+	go: () => require('./go')
 };
 
 class Fusion extends EventEmitter {
@@ -28,6 +29,8 @@ class Fusion extends EventEmitter {
 		this.python.stream = (fn, args, options) => this.stream('python', fn, args, options);
 		this.rust = this.rust.bind(this);
 		this.rust.stream = (fn, args, options) => this.stream('rust', fn, args, options);
+		this.go = this.go.bind(this);
+		this.go.stream = (fn, args, options) => this.stream('go', fn, args, options);
 		this.describe = this.describe.bind(this);
 		this.warmup = this.warmup.bind(this);
 		this.doctor = this.doctor.bind(this);
@@ -124,6 +127,10 @@ class Fusion extends EventEmitter {
 		return this.call('rust', fn, args, options);
 	}
 
+	go(fn, args, options) {
+		return this.call('go', fn, args, options);
+	}
+
 	// Contracts declared with @action in the components of a runtime, read without running them
 	describe(runtime) {
 
@@ -137,8 +144,8 @@ class Fusion extends EventEmitter {
 		}
 	}
 
-	// Development: replaces the workers of a runtime when its code changes on disk (the .py files, or the Rust binary after
-	// `cargo build`), so you see your edit in the next call. No call is lost: the new workers start first. Returns { close() }.
+	// Development: replaces the workers of a runtime when its code changes on disk (the .py files, or the Rust or Go binary after
+	// `cargo build` or `go build`), so you see your edit in the next call. No call is lost: the new workers start first. Returns { close() }.
 	//   fusion.watch('python');
 	// options: debounce (ms of quiet after the last change, default 200), log (default true), onreload({ runtime, files, replaced })
 	watch(runtime, options) {

@@ -45,3 +45,16 @@ A Rust worker sends and receives the same data, as the vectors of the matching t
 | `Int8Array`, `Int16Array`, `Uint16Array`, `Uint32Array`, `BigInt64Array`, `BigUint64Array` | `Value::I8`, `I16`, `U16`, `U32`, `I64`, `U64` |
 
 Returning a `Vec<u8>` or a `Vec<f32>` (they convert into a `Value`) sends a `Buffer` or a `Float32Array` back. The bytes arrive in Rust as a vector (a copy of the frame, one `memcpy`), not as a view. NaN and infinity cannot be sent (JSON has no such numbers): the call fails with `NOT_SERIALIZABLE`. The crate is described in [rust/README.md](../rust/README.md).
+
+## In Go
+
+A Go worker sends and receives the same data, as the slices of the matching type:
+
+| JavaScript | Go |
+|---|---|
+| `Buffer`, `Uint8Array`, `ArrayBuffer` | `[]byte`, read with `AsBytes()` |
+| `Float32Array`, `Float64Array` | `[]float32`, `[]float64`, read with `AsFloat32s()`, `AsFloat64s()` |
+| `Int32Array` | `[]int32`, read with `AsInt32s()` |
+| `Int8Array`, `Int16Array`, `Uint16Array`, `Uint32Array`, `BigInt64Array`, `BigUint64Array` | `[]int8`, `[]int16`, `[]uint16`, `[]uint32`, `[]int64`, `[]uint64`, read with `Raw()` |
+
+Returning a `[]byte` or a `[]float32` sends a `Buffer` or a `Float32Array` back. A `[]byte` that arrives is a slice of the frame (no copy). NaN and infinity cannot be sent: the call fails with `NOT_SERIALIZABLE`. A struct or a `[]string` is sent as JSON. The module is described in [go/README.md](../go/README.md).

@@ -16,7 +16,7 @@ TotalFusion extends Total.js with other runtimes. These pages explain how to use
 |---|---|
 | [Python](python.md) | Machine learning and any Python library. Available. |
 | [Rust](rust.md) | Speed, threads and a small footprint. Available. |
-| [Go](go.md) | A plan. Not started. |
+| [Go](go.md) | Network and infrastructure code, many calls at once, easy to build for any system. Available. |
 
 ## Features that every runtime shares
 
@@ -33,4 +33,4 @@ TotalFusion extends Total.js with other runtimes. These pages explain how to use
 
 ## About the project
 
-[Changelog](../CHANGELOG.md) · [Contributing](../CONTRIBUTING.md) · [The Rust crate](../rust/README.md)
+[Changelog](../CHANGELOG.md) · [Contributing](../CONTRIBUTING.md) · [The Rust crate](../rust/README.md) · [The Go module](../go/README.md)

@@ -1,12 +1,13 @@
 {
 	"name": "totalfusion",
 	"version": "0.1.0",
-	"description": "Extends Total.js with Python and Rust: supervised workers, contracts that become actions and MCP tools, streaming, binary data and development reload.",
+	"description": "Extends Total.js with Python, Rust and Go: supervised workers, contracts that become actions and MCP tools, streaming, binary data and development reload.",
 	"keywords": [
 		"totaljs",
 		"total.js",
 		"python",
 		"rust",
+		"go",
 		"worker",
 		"workers",
 		"ipc",
@@ -45,6 +46,11 @@
 		"rust/Cargo.toml",
 		"rust/README.md",
 		"rust/src",
+		"go/index.js",
+		"go/go.mod",
+		"go/README.md",
+		"go/*.go",
+		"!go/*_test.go",
 		"CHANGELOG.md",
 		"!**/__pycache__",
 		"!**/*.pyc"
@@ -52,6 +58,7 @@
 	"scripts": {
 		"test": "node --test",
 		"test:rust": "cargo test --manifest-path rust/Cargo.toml",
+		"test:go": "cd go && go test ./...",
 		"prepublishOnly": "npm test"
 	}
 }

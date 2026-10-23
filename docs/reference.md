@@ -2,7 +2,7 @@
 
 ## Options
 
-The options of `fusion.configure({ python: {...} })` and `fusion.configure({ rust: {...} })`:
+The options of `fusion.configure({ python: {...} })`, `fusion.configure({ rust: {...} })` and `fusion.configure({ go: {...} })`:
 
 | Option | Runtime | Default | |
 |---|---|---|---|
@@ -23,18 +23,18 @@ The options of `fusion.configure({ python: {...} })` and `fusion.configure({ rus
 | `venv` | Python | | A virtual environment whose interpreter is used. |
 | `preload` | Python | none | Modules to import (running their `@startup`) before a worker is ready. |
 | `requirements` | Python | `requirements.txt` | The file that `doctor` checks. |
-| `binary` | Rust | | The path of the worker you built. |
-| `args` | Rust | none | Arguments for the worker. |
-| `cwd` | Rust | folder of the binary | Working directory of the worker. |
-| `shadowCopy` | Rust | `true` on Windows | Run the worker from a copy, see [Rust](rust.md). |
+| `binary` | Rust, Go | | The path of the worker you built. |
+| `args` | Rust, Go | none | Arguments for the worker. |
+| `cwd` | Rust, Go | folder of the binary | Working directory of the worker. |
+| `shadowCopy` | Rust, Go | `true` on Windows | Run the worker from a copy, see [Rust](rust.md) and [Go](go.md). |
 
 Options of a single call (`fusion.python(fn, args, options)`): `timeout`, `signal` (an `AbortSignal`), `idempotent` and `retries` (see [Retrying](workers.md#retrying-a-call-that-can-be-repeated)), and for a stream `highWaterMark`.
 
-The methods: `fusion.python(fn, args, options)` and `fusion.rust(...)` (or `fusion.call(runtime, fn, args, options)`), `fusion.stream(...)` and `fusion.python.stream(...)` / `fusion.rust.stream(...)`, `fusion.describe(runtime)`, `fusion.warmup(runtime)`, `fusion.watch(runtime)`, `fusion.doctor(runtime)`, `fusion.register(options)` and `fusion.sse($, stream)` for Total.js, `fusion.stats()` and `fusion.shutdown()`.
+The methods: `fusion.python(fn, args, options)`, `fusion.rust(...)` and `fusion.go(...)` (or `fusion.call(runtime, fn, args, options)`), `fusion.stream(...)` and `fusion.python.stream(...)` / `fusion.rust.stream(...)` / `fusion.go.stream(...)`, `fusion.describe(runtime)`, `fusion.warmup(runtime)`, `fusion.watch(runtime)`, `fusion.doctor(runtime)`, `fusion.register(options)` and `fusion.sse($, stream)` for Total.js, `fusion.stats()` and `fusion.shutdown()`.
 
 ## Per-call options
 
-`fusion.python(fn, args, options)`, `fusion.rust(...)` and `fusion.call(runtime, fn, args, options)` accept:
+`fusion.python(fn, args, options)`, `fusion.rust(...)`, `fusion.go(...)` and `fusion.call(runtime, fn, args, options)` accept:
 
 | Option | |
 |---|---|
@@ -48,10 +48,10 @@ The methods: `fusion.python(fn, args, options)` and `fusion.rust(...)` (or `fusi
 
 | | |
 |---|---|
-| `fusion.configure({ python: {...}, rust: {...} })` | Sets the options. It must run before the first call. |
-| `fusion.python(fn, args, options)` / `fusion.rust(...)` | Calls a function. Returns a promise. |
+| `fusion.configure({ python: {...}, rust: {...}, go: {...} })` | Sets the options. It must run before the first call. |
+| `fusion.python(fn, args, options)` / `fusion.rust(...)` / `fusion.go(...)` | Calls a function. Returns a promise. |
 | `fusion.call(runtime, fn, args, options)` | The same, with the runtime as an argument. |
-| `fusion.stream(runtime, fn, args, options)` / `fusion.python.stream(...)` / `fusion.rust.stream(...)` | Calls a function that sends chunks. Returns an async iterable with `.toArray()` and `.cancel()`. See [Streaming](streaming.md). |
+| `fusion.stream(runtime, fn, args, options)` / `fusion.python.stream(...)` / `fusion.rust.stream(...)` / `fusion.go.stream(...)` | Calls a function that sends chunks. Returns an async iterable with `.toArray()` and `.cancel()`. See [Streaming](streaming.md). |
 | `fusion.describe(runtime)` | The contracts of the functions, read without running them. |
 | `fusion.warmup(runtime)` | Starts all the workers and waits until they are ready. |
 | `fusion.watch(runtime, options)` | Replaces the workers when the code changes. See [Development](development.md). |
@@ -65,7 +65,7 @@ The methods: `fusion.python(fn, args, options)` and `fusion.rust(...)` (or `fusi
 ## The command
 
 ```
-npx totalfusion doctor [--runtime python|rust] [--path DIR] [--venv DIR] [--python COMMAND]
+npx totalfusion doctor [--runtime python|rust|go] [--path DIR] [--venv DIR] [--python COMMAND]
                        [--requirements FILE] [--preload a,b] [--binary FILE] [--max-memory 2gb] [--json]
 ```
 

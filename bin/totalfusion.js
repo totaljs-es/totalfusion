@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// totalfusion doctor [--runtime python|rust] [--path DIR] [--venv DIR] [--python COMMAND] [--requirements FILE] [--preload a,b]
+// totalfusion doctor [--runtime python|rust|go] [--path DIR] [--venv DIR] [--python COMMAND] [--requirements FILE] [--preload a,b]
 //                      [--binary FILE] [--max-memory 2gb] [--json]
 //
 // Checks the interpreter, the components and the libraries they need, without importing or installing anything.
@@ -33,7 +33,7 @@ for (let i = 0; i < args.length; i++) {
 }
 
 if (command !== 'doctor') {
-	console.error('Usage: totalfusion doctor [--runtime python|rust] [--path DIR] [--venv DIR] [--python COMMAND] [--requirements FILE] [--preload a,b] [--binary FILE] [--max-memory 2gb] [--json]');
+	console.error('Usage: totalfusion doctor [--runtime python|rust|go] [--path DIR] [--venv DIR] [--python COMMAND] [--requirements FILE] [--preload a,b] [--binary FILE] [--max-memory 2gb] [--json]');
 	process.exit(2);
 }
 
@@ -62,7 +62,7 @@ if (values['max-memory'])
 
 const runtime = values.runtime || (values.binary ? 'rust' : 'python');
 
-if (!['python', 'rust'].includes(runtime)) {
+if (!['python', 'rust', 'go'].includes(runtime)) {
 	console.error('Unknown runtime: ' + runtime);
 	process.exit(2);
 }

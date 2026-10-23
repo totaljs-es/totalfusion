@@ -25,7 +25,7 @@ def analyze(data):
 
 **Goal:** an agent can use a function of yours as a tool, with the arguments checked.
 
-**How:** add `mcp=True` (or `.mcp(true)` in Rust) to the contract and enable the MCP endpoint of Total.js. The tool and its schema come from the contract.
+**How:** add `mcp=True` (`.mcp(true)` in Rust, `.MCP(true)` in Go) to the contract and enable the MCP endpoint of Total.js. The tool and its schema come from the contract.
 
 **Run:** the endpoint was called with `tools/list` and `tools/call`: only the functions that say `mcp` are listed, the schema has the `input`, `query` and `params` sections, an invalid argument is rejected by Total.js, and a function that does not say `mcp` answers "Unknown tool". Remember that the endpoint has no authentication unless you add it: see [Security](security.md).
 
@@ -51,9 +51,9 @@ ROUTE('GET /generate/', $ => fusion.sse($, fusion.python.stream('llm.generate', 
 
 **Goal:** a calculation that takes seconds must not freeze the application.
 
-**How:** write it in Rust and call it with `fusion.rust(...)`; let one process use all the cores with `concurrency`.
+**How:** write it in Rust or Go and call it with `fusion.rust(...)` or `fusion.go(...)`; let one process use all the cores with `concurrency`.
 
-**Measured:** the longest Collatz chain below 3 million, the same algorithm in each language. Optimized JavaScript takes 1.2 s and Rust 0.33 s (3.6 times faster; the naive JavaScript is 14 times slower than Rust), and pure Python is 48 times slower than Rust. Eight of those jobs take 9.1 s in JavaScript **blocking the event loop the whole time**, against 0.7 s on four Rust workers with 1 ms of delay in the event loop. See [Rust](rust.md) and the example in [examples/rust](../examples/rust).
+**Measured:** the longest Collatz chain below 3 million, the same algorithm in each language. Optimized JavaScript takes 1.2 s and Rust 0.33 s (3.6 times faster; the naive JavaScript is 14 times slower than Rust), and pure Python is 48 times slower than Rust. Eight of those jobs take 9.1 s in JavaScript **blocking the event loop the whole time**, against 0.7 s on four Rust workers with 1 ms of delay in the event loop. The same test run again with a Go worker next to the Rust one, on the same day and machine (three alternating runs, and another implementation of the optimized JavaScript, 0.95 s): Go took 0.48 to 0.50 s and Rust 0.36 s, and eight jobs took 7.5 s in JavaScript against 1.0 to 1.1 s on four Go workers and 0.75 to 0.84 s on four Rust workers. See [Rust](rust.md), [Go](go.md) and the examples in [examples/rust](../examples/rust) and [examples/go](../examples/go).
 
 ## Vector search and numerical work with NumPy
 
@@ -81,12 +81,12 @@ ROUTE('GET /generate/', $ => fusion.sse($, fusion.python.stream('llm.generate', 
 
 **Run:** in [examples/totaljs-app](../examples/totaljs-app), editing `python/words.py` while the application ran changed the answer of the next request (a count of 3 became 300), and no call was lost. In the tests, calls made while the workers were being replaced all succeeded. See [Development](development.md).
 
-## Python and Rust in the same application
+## Several runtimes in the same application
 
-**Run:** both runtimes can be configured in the same `fusion` and called side by side, each with its own pool (`fusion.python(...)` and `fusion.rust(...)`). A pipeline that chains them (for example a model in Python and a post-processing step in Rust) was **not** built as an example.
+**Run:** both runtimes can be configured in the same `fusion` and called side by side, each with its own pool (`fusion.python(...)`, `fusion.rust(...)` and `fusion.go(...)`). A pipeline that chains them (for example a model in Python and a post-processing step in Rust) was **not** built as an example.
 
 ## Where it does not fit
 
-- **Light work on small data.** JavaScript in the same process pays no transfer: it wins. A call to a worker costs 0.03 ms (Rust) to 0.07 ms (Python) of overhead, which is nothing for real work and everything for adding two numbers.
+- **Light work on small data.** JavaScript in the same process pays no transfer: it wins. A call to a worker costs 0.03 ms (Rust and Go) to 0.07 ms (Python) of overhead, which is nothing for real work and everything for adding two numbers.
 - **Code you do not trust.** A worker is not a sandbox: see [Security](security.md).
 - **Very many Node.js processes.** Every process has its own pool of workers, so with the cluster mode of Total.js the workers (and their models) multiply by the number of processes.

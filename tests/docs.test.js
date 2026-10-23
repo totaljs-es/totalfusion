@@ -11,7 +11,7 @@ const ROOT = Path.join(__dirname, '..');
 const DOCS = Path.join(ROOT, 'docs');
 
 const PAGES = [
-	'README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', Path.join('rust', 'README.md'), Path.join('examples', 'totaljs-app', 'README.md'), Path.join('examples', 'totaljs-numerics', 'README.md'),
+	'README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', Path.join('rust', 'README.md'), Path.join('go', 'README.md'), Path.join('examples', 'totaljs-app', 'README.md'), Path.join('examples', 'totaljs-numerics', 'README.md'),
 	...Fs.readdirSync(DOCS).filter(name => name.endsWith('.md')).map(name => Path.join('docs', name))
 ];
 
@@ -184,10 +184,17 @@ test('what the documentation says about the package matches the package', functi
 	const pack = JSON.parse(Fs.readFileSync(Path.join(ROOT, 'package.json'), 'utf8'));
 	const crate = /^version = "([^"]+)"/m.exec(Fs.readFileSync(Path.join(ROOT, 'rust', 'Cargo.toml'), 'utf8'))[1];
 
+	const module = /^const Version = "([^"]+)"/m.exec(Fs.readFileSync(Path.join(ROOT, 'go', 'app.go'), 'utf8'))[1];
+
 	// The versions that the pages quote
 	for (const file of PAGES) {
-		for (const match of Fs.readFileSync(Path.join(ROOT, file), 'utf8').matchAll(/totalfusion crate (\d+\.\d+\.\d+)/g))
+		const text = Fs.readFileSync(Path.join(ROOT, file), 'utf8');
+
+		for (const match of text.matchAll(/totalfusion crate (\d+\.\d+\.\d+)/g))
 			assert.equal(match[1], crate, file + ' quotes the crate ' + match[1]);
+
+		for (const match of text.matchAll(/totalfusion module (\d+\.\d+\.\d+)/g))
+			assert.equal(match[1], module, file + ' quotes the module ' + match[1]);
 	}
 
 	// The options that the reference documents are the ones the runtimes read
