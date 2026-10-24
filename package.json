@@ -30,7 +30,6 @@
 	},
 	"author": "Spanish Total.js Platform",
 	"license": "MIT",
-	"private": true,
 	"main": "index.js",
 	"bin": {
 		"totalfusion": "bin/totalfusion.js"
