@@ -1,7 +1,9 @@
 name: tests
 
 on:
+  # A push to main, and every pull request: a branch with a pull request is tested once, not twice
   push:
+    branches: [main]
   pull_request:
 
 jobs:

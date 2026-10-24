@@ -8,6 +8,7 @@ The finished application is in [examples/tutorials/01-python-action-and-mcp](../
 
 - Node.js 20 or newer and Python 3.9 or newer.
 - This repository, and `npm install` in the folder of the tutorial (it installs Total.js 5 and links TotalFusion).
+- **A Total.js 5 that has the MCP endpoint, for step 5.** The endpoint is in the repository of Total.js 5 (version 0.0.20-1 was tested), but **not in the release 0.0.19 of the npm package**, which is what `npm install` gives today. With 0.0.19 everything works except step 5, and `npm run verify` says that it did not check the tool for agents. To try step 5, install Total.js 5 from a clone of its repository: `npm install /path/to/your/clone`.
 
 ```bash
 cd examples/tutorials/01-python-action-and-mcp
@@ -64,7 +65,7 @@ exports.install = function() {
 };
 ```
 
-`fusion.register()` reads the contracts of the folder `python/` **without running anything**, and creates a Total.js action for each function that declares one: `sentiment/analyze`. After that it is an action like any other: `ACTION('sentiment/analyze', ...)`, an API route, a Flow node. The second line is the route: a `POST` to `/api/` with `{ "schema": "sentiment_analyze", "data": ... }`.
+`fusion.register()` reads the contracts of the folder `python/` **without running anything** (Python parses the files and does not import them), and creates a Total.js action for each function that declares one: `sentiment/analyze`. After that it is an action like any other: `ACTION('sentiment/analyze', ...)`, an API route, a Flow node. The second line is the route: a `POST` to `/api/` with `{ "schema": "sentiment_analyze", "data": ... }`.
 
 ## 3. Call it
 

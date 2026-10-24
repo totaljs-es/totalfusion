@@ -147,6 +147,41 @@ describe('the files for each agent lead to AGENTS.md', function() {
 
 });
 
+
+describe('Codex repo-local skills', function() {
+
+	const directory = Path.join(ROOT, '.agents', 'skills');
+
+	test('each shared workflow is discoverable in .agents/skills with the same metadata', function() {
+
+		assert.deepEqual(Fs.readdirSync(directory).sort(), [...SKILLS].sort());
+
+		for (const name of SKILLS) {
+			const entry = read('.agents/skills/' + name + '/SKILL.md');
+			const shared = read('.claude/skills/' + name + '/SKILL.md');
+			const metadata = text => /^---\nname: (.+)\ndescription: (.+)\n---\n/.exec(text);
+
+			assert.ok(metadata(entry), name + ' has no discovery metadata');
+			assert.deepEqual(metadata(entry).slice(1), metadata(shared).slice(1), name + ' has different discovery metadata');
+		}
+	});
+
+	test('Codex entries resolve to the maintained shared checklists', function() {
+
+		for (const name of SKILLS) {
+			const file = '.agents/skills/' + name + '/SKILL.md';
+			const link = /\[Shared checklist\]\(([^)]+)\)/.exec(read(file));
+			assert.ok(link, file + ' has no shared checklist link');
+
+			const target = Path.resolve(ROOT, Path.dirname(file), link[1]);
+			assert.equal(target, Path.join(ROOT, '.claude', 'skills', name, 'SKILL.md'));
+			assert.ok(Fs.statSync(target).isFile(), file + ' links to a missing checklist');
+			check(file);
+		}
+	});
+
+});
+
 describe('the instructions of each area of the repository', function() {
 
 	test('every area has AGENTS.md, and a CLAUDE.md that imports it (Claude Code reads the CLAUDE.md of a folder, not its AGENTS.md)', function() {

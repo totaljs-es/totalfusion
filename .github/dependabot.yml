@@ -5,3 +5,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # One pull request for all the actions, not one for each, so the repository does not fill with branches
+    groups:
+      actions:
+        patterns:
+          - "*"

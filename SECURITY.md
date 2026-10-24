@@ -12,7 +12,7 @@ Report it **privately**: open the *Security* tab of the repository and choose *R
 
 - A module of WebAssembly that gets out of its sandbox: it reads or writes a file, sees the environment, opens a connection or affects the process that runs it.
 - A malformed frame or a payload that crashes or exhausts the engine in Node.js.
-- A function that reads the contracts or the environment (`doctor`, `describe`, `register`) running code that the documentation says it does not run.
+- `doctor`, `describe` or `register` running more than the documentation says: a Python component that is imported, or a function of any runtime that is called, when only its contract was being read. (Starting a Rust or Go binary with `--describe`, or the host of a WebAssembly module, is documented.)
 - A message of an error that leaks to a client what the documentation says that it keeps in the log.
 
 ## What is not

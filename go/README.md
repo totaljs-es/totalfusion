@@ -88,7 +88,7 @@ NaN and infinity cannot be sent (JSON has no such numbers): the call fails with 
 
 The methods that describe a function apply to the function registered just before them: `Summary`, `Input`, `Output`, `Query`, `Params` (the schema syntax of Total.js, `*` means required), `Permissions`, `User`, `SA`, `SU`, `Timeout` (a `time.Duration`), `Idempotent` (the call may be repeated on another worker if this one dies), `ID` and `MCP`. A function that declares any of them, or calls `.Action()`, becomes an action of Total.js with `fusion.register({ runtime: 'go', go: { binary } })`; the others stay callable from JavaScript but private. `MCP(true)` also exposes it to AI agents.
 
-`./worker --describe` prints the contracts as JSON. This is what `register()` and `fusion.doctor('go')` read, so nothing runs to learn them.
+`./worker --describe` prints the contracts as JSON. This is what `register()` and `fusion.doctor('go')` read: no function is called to learn them, but the program starts, so what your `main` does before `Run()` (loading a model, opening a connection) runs too.
 
 ## Do not print to the standard output
 

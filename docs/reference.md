@@ -53,7 +53,7 @@ The methods: `fusion.python(fn, args, options)`, `fusion.rust(...)` and `fusion.
 | `fusion.python(fn, args, options)` / `fusion.rust(...)` / `fusion.go(...)` / `fusion.wasm(...)` | Calls a function. Returns a promise. |
 | `fusion.call(runtime, fn, args, options)` | The same, with the runtime as an argument. |
 | `fusion.stream(runtime, fn, args, options)` / `fusion.python.stream(...)` / `fusion.rust.stream(...)` / `fusion.go.stream(...)` / `fusion.wasm.stream(...)` | Calls a function that sends chunks. Returns an async iterable with `.toArray()` and `.cancel()`. See [Streaming](streaming.md). |
-| `fusion.describe(runtime)` | The contracts of the functions, read without running them. |
+| `fusion.describe(runtime)` | The contracts of the functions, read without calling them. A Python component is parsed, not imported; a Rust or Go binary is started with `--describe`; a WebAssembly module is started by its host. |
 | `fusion.warmup(runtime)` | Starts all the workers and waits until they are ready. |
 | `fusion.watch(runtime, options)` | Replaces the workers when the code changes. See [Development](development.md). |
 | `fusion.doctor(runtime)` | Checks the environment. Returns `{ ok, checks, text }`. |

@@ -46,7 +46,7 @@ The JSON holds the structure of the message and the binary data travels raw afte
 
 ## Contracts
 
-A function declares what it takes and returns with `@action(...)` in Python or `.input()`/`.output()`... in Rust and `.Input()`/`.Output()`... in Go. The contract is read without running anything: Python is read as text (an AST), and a Rust or Go worker prints it with `--describe`. `fusion.describe(runtime)` returns it, and `fusion.register()` turns it into actions of Total.js.
+A function declares what it takes and returns with `@action(...)` in Python or `.input()`/`.output()`... in Rust and `.Input()`/`.Output()`... in Go. The contract is read **without calling any function**: Python is read as text (an AST) and never imported, a Rust or Go worker is started with `--describe` and prints it, and a WebAssembly module is started by its host, which asks it. A worker that starts also runs what its `main` does before it registers its functions. `fusion.describe(runtime)` returns it, and `fusion.register()` turns it into actions of Total.js.
 
 ## Adding a runtime
 

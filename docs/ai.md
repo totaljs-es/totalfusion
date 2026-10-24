@@ -52,18 +52,31 @@ It prints one JSON object, and the exit code says the result: `0` when everythin
 }
 ```
 
-Each check has a `status` (`ok`, `warn` or `error`), a `name`, a `message` and, when there is something to do, the exact command in `fix`. An agent can run the command of `fix` instead of guessing. The doctor reads the code without running it, so it is safe to call. See [Development and diagnosis](development.md).
+Each check has a `status` (`ok`, `warn` or `error`), a `name`, a `message` and, when there is something to do, the exact command in `fix`. An agent can run the command of `fix` instead of guessing. For Python, the doctor reads components without importing them. For Rust and Go it executes the worker with `--describe`; for WebAssembly the host reads the module contract inside its sandbox. A native worker still has the permissions of its user during discovery: use a trusted binary. See [Development and diagnosis](development.md).
 
 ## For agents that work on the repository
 
 The repository has the files that the common agents look for. They all lead to the same instructions, so there is only one text to keep true:
 
 - `AGENTS.md`: the instructions. Each area of the repository (`go`, `rust`, `python`, `wasm`, `total5`, `tests`) has its own, with a `CLAUDE.md` that imports it, because Claude Code loads the `CLAUDE.md` of a folder when it works there.
+- Codex reads `AGENTS.md` directly. Its four repo-local skill entry points are in `.agents/skills/`, and each links to the corresponding checklist in `.claude/skills/`. The checklist stays in one place.
 - `CLAUDE.md` and `GEMINI.md`: they import `AGENTS.md`.
 - `.github/copilot-instructions.md`: a short version for GitHub Copilot, with the rules that matter most.
 - `.claude/skills/`: four skills for Claude Code (add a function to an application, diagnose a worker that fails, add a tutorial, verify a change). Each one is a checklist with the real commands.
 - `.claude/settings.json`: the commands that are safe to run without asking (the tests, `npm run check`, read-only git).
 
+## Codex
+
+Start a Codex chat with this repository as the workspace. Codex reads the root `AGENTS.md` and instructions along the path to its working directory. When working in another area, read that area's `AGENTS.md` before editing it. If your chat started in another project, explicitly read this repository's instructions; mentioning its path does not change the chat's workspace.
+
+The skills in `.agents/skills/` expose the same four workflows as Claude Code: add a function, diagnose a worker, add a tutorial and verify a change. Codex can select one when its description matches the task; you can also ask for it explicitly, for example `$totalfusion-diagnose-worker`. Each entry links to the maintained checklist, so updates to it apply to both agents.
+
+The shared `.claude/settings.json` configures Claude Code. Codex uses the permissions of its own environment; these repository instructions do not grant filesystem access, network access or command approval. No Codex configuration change is required to read the instructions and skills.
+
+For applications that install TotalFusion as a dependency, ask Codex to read `node_modules/totalfusion/AGENTS.md`; dependency instructions are not automatically loaded as application instructions. The repo-local skills are for a checkout of TotalFusion and are not shipped in its npm package.
+
+See the official OpenAI documentation on [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md) and [skills](https://learn.chatgpt.com/docs/build-skills) for discovery and invocation.
+
 ## What is verified
 
-`tests/agents.test.js` checks that the paths and the commands that `AGENTS.md` and the skills mention exist, that `llms.txt` lists every page and that its links lead to files that exist, that `llms-full.txt` is what the pages say, that the schemas have the same options as the code, and that the files for each agent lead to `AGENTS.md`. What is **not** verified is how a given assistant uses these files: that depends on the assistant.
+`tests/agents.test.js` checks that the paths and the commands that `AGENTS.md` and the skills mention exist, that `llms.txt` lists every page and that its links lead to files that exist, that `llms-full.txt` is what the pages say, that the schemas have the same options as the code, and that the files for each agent lead to `AGENTS.md`. It also checks that every Codex skill has the same discovery metadata as its shared checklist and that its link resolves to that checklist. What is **not** verified is how a given assistant uses these files: that depends on the assistant.

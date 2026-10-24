@@ -119,7 +119,9 @@ describe('01 a Python function as an API and as a tool for an AI agent', { skip 
 
 	test('the application does what the tutorial says', async function() {
 		const item = await start(copy('01-python-action-and-mcp'));
-		assert.match(verify(item), /Verified: the API, the validation and the tool for agents/);
+		// The release of Total.js 5 in npm (0.0.19) has no MCP endpoint: then the checker says so and does not check the tool for agents
+		const mcp = Fs.existsSync(Path.join(total5, 'mcp.js'));
+		assert.match(verify(item), mcp ? /Verified: the API, the validation and the tool for agents/ : /Verified: the API and the validation\. The tool for agents was NOT checked/);
 
 		// the checker blocked this process while it ran: what the application printed arrives now
 		await wait(300);

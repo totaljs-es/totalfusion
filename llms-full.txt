@@ -128,7 +128,7 @@ Version 0.1.0, not published. The whole test suite (more than 410 tests: Python,
 | Go | The stable toolchain of the runners on the three systems, and locally with Go 1.21 and 1.27 (the module with the race detector, and the 62 tests of its worker) |
 | WebAssembly | GitHub Actions on the three systems (Node.js 20, 22 and 24 on Linux), and locally with Node.js 26: the 50 tests of the module, including a module that tries to get out |
 | Flow | The test harness of Total.js on the three systems, and by hand in the designer of Flow 11.1 on macOS |
-| Total.js | `total5` from npm in GitHub Actions, and also the 0.0.20 development version locally |
+| Total.js | `total5` from npm (0.0.19) in GitHub Actions, and the development version 0.0.20-1 locally. **The MCP endpoint is not in 0.0.19**, so it is checked only against the development version, on macOS |
 
 Python 3.15 and the combinations that are not in the matrix of [.github/workflows/test.yml](.github/workflows/test.yml) were run only locally.
 
@@ -188,7 +188,7 @@ for await (const chunk of fusion.python.stream('module.generator', args)) { }
 - **WebAssembly** modules run in a sandbox (no files, no network, no environment) and are WASI reactors with a small ABI (`docs/webassembly.md`). A runtime has one module: use one `new Fusion({ wasm: ... })` for each module. The SDK is in Go (`app.Wasm()` in `init`, Go 1.24 or newer).
 - **A route with a dot in a segment** (`/x/discount.apply/`) looks like a file to Total.js and gets an empty reply: split the function name across segments.
 - **Nothing is downloaded, compiled or installed for you.** Workers are built by the user (`cargo build --release`, `go build`).
-- **Check the setup first:** `npx totalfusion doctor --path ./python` (also `--runtime rust|go|wasm` with `--binary` or `--module`). It reads the code without running it and says what to fix; with `--json` it prints `{ ok, checks: [{ status, name, message, fix }] }` and the exit code is `0`, `1` (something to fix) or `2` (wrong usage). Run the command of `fix` instead of guessing.
+- **Check the setup first:** `npx totalfusion doctor --path ./python` (also `--runtime rust|go|wasm` with `--binary` or `--module`). For Python it reads the components without importing them; for Rust and Go it executes the worker with `--describe`, and for WebAssembly it runs the host to read the module contract. Use trusted native workers. It says what to fix; with `--json` it prints `{ ok, checks: [{ status, name, message, fix }] }` and the exit code is `0`, `1` (something to fix) or `2` (wrong usage). Run the command of `fix` instead of guessing.
 - **Flow:** seven components (Python, Rust, Go, WebAssembly, Stream, Events, Stats) in `total5/flow/`, listed in `total5/flow/db.json`; see `docs/flow.md`.
 - **More for models:** `llms.txt` (an index of the documentation), `llms-full.txt` (all of it in one file), `schemas/configure.schema.json` (the options of `fusion.configure()` and of a call) and `schemas/contract.schema.json` (a contract and what `--describe` prints). `docs/ai.md` explains them.
 
@@ -200,6 +200,7 @@ Each area (`go/`, `rust/`, `python/`, `wasm/`, `total5/`, `tests/`) has its own 
 - `python/`, `rust/`, `go/`, `wasm/` are the runtimes: each has an adapter (`index.js`) and its worker or SDK (`worker.py` and `sdk/`; the `totalfusion` crate in `rust/src`; the Go module in `go/*.go`; `wasm/host.js`).
 - `total5/` is the Total.js integration: `index.js` (`register`, `sse`), `flow.js` and `flow/*.html` (the components of Flow).
 - `bin/totalfusion.js` is the `doctor` command. `scripts/flow-db.js` builds `total5/flow/db.json`; `scripts/llms.js` builds `llms.txt` and `llms-full.txt`.
+- For Codex: this file is the native entry point; no separate Codex instructions file is needed. Start the chat in the TotalFusion repository so instructions and repo-local skills are discovered. The four entries in `.agents/skills/` reuse the shared checklists in `.claude/skills/`; read their linked checklist when a workflow applies. See `docs/ai.md`.
 - For agents: this file, `CLAUDE.md` and `GEMINI.md` (they import it), `.github/copilot-instructions.md`, `.claude/skills/` (four checklists: add a function, diagnose a worker, add a tutorial, verify a change) and `.claude/settings.json` (the commands that are safe to run without asking), `schemas/` and `llms.txt`.
 - `tests/` has the tests and the workers they run (`tests/go`, `tests/rust`, `tests/wasm`, `tests/components`). `examples/` has the examples (`examples/README.md` lists them, and `tests/examples.test.js` runs them) and the applications of the tutorials (`examples/tutorials`). `docs/` is the documentation, and it is tested.
 - `.github/workflows/test.yml` runs the suite on Linux (Node.js 20, 22, 24), macOS and Windows.
@@ -297,21 +298,34 @@ It prints one JSON object, and the exit code says the result: `0` when everythin
 }
 ```
 
-Each check has a `status` (`ok`, `warn` or `error`), a `name`, a `message` and, when there is something to do, the exact command in `fix`. An agent can run the command of `fix` instead of guessing. The doctor reads the code without running it, so it is safe to call. See [Development and diagnosis](development.md).
+Each check has a `status` (`ok`, `warn` or `error`), a `name`, a `message` and, when there is something to do, the exact command in `fix`. An agent can run the command of `fix` instead of guessing. For Python, the doctor reads components without importing them. For Rust and Go it executes the worker with `--describe`; for WebAssembly the host reads the module contract inside its sandbox. A native worker still has the permissions of its user during discovery: use a trusted binary. See [Development and diagnosis](development.md).
 
 ## For agents that work on the repository
 
 The repository has the files that the common agents look for. They all lead to the same instructions, so there is only one text to keep true:
 
 - `AGENTS.md`: the instructions. Each area of the repository (`go`, `rust`, `python`, `wasm`, `total5`, `tests`) has its own, with a `CLAUDE.md` that imports it, because Claude Code loads the `CLAUDE.md` of a folder when it works there.
+- Codex reads `AGENTS.md` directly. Its four repo-local skill entry points are in `.agents/skills/`, and each links to the corresponding checklist in `.claude/skills/`. The checklist stays in one place.
 - `CLAUDE.md` and `GEMINI.md`: they import `AGENTS.md`.
 - `.github/copilot-instructions.md`: a short version for GitHub Copilot, with the rules that matter most.
 - `.claude/skills/`: four skills for Claude Code (add a function to an application, diagnose a worker that fails, add a tutorial, verify a change). Each one is a checklist with the real commands.
 - `.claude/settings.json`: the commands that are safe to run without asking (the tests, `npm run check`, read-only git).
 
+## Codex
+
+Start a Codex chat with this repository as the workspace. Codex reads the root `AGENTS.md` and instructions along the path to its working directory. When working in another area, read that area's `AGENTS.md` before editing it. If your chat started in another project, explicitly read this repository's instructions; mentioning its path does not change the chat's workspace.
+
+The skills in `.agents/skills/` expose the same four workflows as Claude Code: add a function, diagnose a worker, add a tutorial and verify a change. Codex can select one when its description matches the task; you can also ask for it explicitly, for example `$totalfusion-diagnose-worker`. Each entry links to the maintained checklist, so updates to it apply to both agents.
+
+The shared `.claude/settings.json` configures Claude Code. Codex uses the permissions of its own environment; these repository instructions do not grant filesystem access, network access or command approval. No Codex configuration change is required to read the instructions and skills.
+
+For applications that install TotalFusion as a dependency, ask Codex to read `node_modules/totalfusion/AGENTS.md`; dependency instructions are not automatically loaded as application instructions. The repo-local skills are for a checkout of TotalFusion and are not shipped in its npm package.
+
+See the official OpenAI documentation on [AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md) and [skills](https://learn.chatgpt.com/docs/build-skills) for discovery and invocation.
+
 ## What is verified
 
-`tests/agents.test.js` checks that the paths and the commands that `AGENTS.md` and the skills mention exist, that `llms.txt` lists every page and that its links lead to files that exist, that `llms-full.txt` is what the pages say, that the schemas have the same options as the code, and that the files for each agent lead to `AGENTS.md`. What is **not** verified is how a given assistant uses these files: that depends on the assistant.
+`tests/agents.test.js` checks that the paths and the commands that `AGENTS.md` and the skills mention exist, that `llms.txt` lists every page and that its links lead to files that exist, that `llms-full.txt` is what the pages say, that the schemas have the same options as the code, and that the files for each agent lead to `AGENTS.md`. It also checks that every Codex skill has the same discovery metadata as its shared checklist and that its link resolves to that checklist. What is **not** verified is how a given assistant uses these files: that depends on the assistant.
 
 ---
 
@@ -791,7 +805,7 @@ NaN and infinity cannot be sent (JSON has no such numbers): the call fails with 
 
 The methods that describe a function apply to the function registered just before them: `summary`, `input`, `output`, `query`, `params` (the schema syntax of Total.js, `*` means required), `permissions`, `user`, `sa`, `su`, `timeout`, `idempotent` (the call may be repeated on another worker if this one dies), `id` and `mcp`. A function that declares any of them, or calls `.action()`, becomes an action of Total.js with `fusion.register({ runtime: 'rust', rust: { binary } })`; the others stay callable from JavaScript but private. `mcp(true)` also exposes it to AI agents.
 
-`./worker --describe` prints the contracts as JSON. This is what `register()` and `fusion.doctor('rust')` read, so nothing runs to learn them.
+`./worker --describe` prints the contracts as JSON. This is what `register()` and `fusion.doctor('rust')` read: no function is called to learn them, but the program starts, so what your `main` does before `run()` (loading a model, opening a connection) runs too.
 
 ## Do not print to the standard output
 
@@ -1003,7 +1017,7 @@ NaN and infinity cannot be sent (JSON has no such numbers): the call fails with 
 
 The methods that describe a function apply to the function registered just before them: `Summary`, `Input`, `Output`, `Query`, `Params` (the schema syntax of Total.js, `*` means required), `Permissions`, `User`, `SA`, `SU`, `Timeout` (a `time.Duration`), `Idempotent` (the call may be repeated on another worker if this one dies), `ID` and `MCP`. A function that declares any of them, or calls `.Action()`, becomes an action of Total.js with `fusion.register({ runtime: 'go', go: { binary } })`; the others stay callable from JavaScript but private. `MCP(true)` also exposes it to AI agents.
 
-`./worker --describe` prints the contracts as JSON. This is what `register()` and `fusion.doctor('go')` read, so nothing runs to learn them.
+`./worker --describe` prints the contracts as JSON. This is what `register()` and `fusion.doctor('go')` read: no function is called to learn them, but the program starts, so what your `main` does before `Run()` (loading a model, opening a connection) runs too.
 
 ## Do not print to the standard output
 
@@ -1221,7 +1235,7 @@ Every function decorated with `@action` becomes a `NEWACTION()` named `<module>/
 - **Generators.** A function that yields is a stream, not an action: `register` skips it with a warning. Call it with `fusion.stream()` or `fusion.sse()`.
 - **Boot.** `fusion.register({ warmup: true })` loads the models before it resolves, and `preload: false` leaves the modules with `@startup` to load on their first call.
 - **Schemas.** Total.js splits the fields of a schema on commas **even inside a `// comment`**, so `'*text:String // Text, up to 2000 chars'` declares a second field called `up to 2000 chars`. `register` returns a `warnings` list for it: use parentheses or a new line.
-- **MCP.** Exposing an action as a tool uses the MCP router of Total.js 5 (`CONF.$mcp = true`). Actions and API routes work without it.
+- **MCP.** Exposing an action as a tool uses the MCP router of Total.js 5 (`CONF.$mcp = true`). **The release 0.0.19 of the `total5` package in npm does not include it**; the repository of Total.js 5 does (0.0.20-1 was tested). Actions and API routes work without it.
 
 ## FlowStream
 
@@ -1653,7 +1667,7 @@ TotalFusion doctor: python
 
 The same from code: `const report = await fusion.doctor('python')` gives `report.ok`, `report.checks` (each with `status`, `name`, `message` and, when there is something to do, `fix`) and `report.text`. The command exits with `0` when everything is in order (warnings are advice), `1` when something has to be fixed and `2` for a wrong usage; `--json` prints the report as JSON. Options: `--runtime python|rust|go|wasm`, `--path`, `--venv`, `--python`, `--requirements`, `--preload a,b`, `--binary` (Rust and Go: with Go, say `--runtime go` too), `--module` (WebAssembly) and `--max-memory 2gb`.
 
-It looks at the interpreter (version, where it was chosen from, virtual environment or system Python), the components (syntax errors, contracts that cannot be read, `preload` modules that do not exist), the libraries they import and `requirements.txt`. **Nothing is imported, run or installed**: the components are read as text, so a module that loads a model on import is no problem. Imports inside functions are found too, and an import guarded by `try/except ImportError` is only a warning. The libraries are looked up with the same interpreter that will run the workers, which is the point: installing a library in another Python is the most common mistake. For `requirements.txt` (next to the components, in the folder above, or the `requirements` option) it checks what is installed and the version specifiers (`==`, `>=`, `<`, ...); lines with environment markers, URLs and options such as `-r` are not checked.
+It looks at the interpreter (version, where it was chosen from, virtual environment or system Python), the components (syntax errors, contracts that cannot be read, `preload` modules that do not exist), the libraries they import and `requirements.txt`. **In Python nothing is imported, run or installed**: the components are read as text, so a module that loads a model on import is no problem. (For a Rust or Go binary the doctor starts the worker with `--describe`, and for a WebAssembly module it starts the host that reads it: no function is called, but the program does start, so use binaries and modules that you trust.) Imports inside functions are found too, and an import guarded by `try/except ImportError` is only a warning. The libraries are looked up with the same interpreter that will run the workers, which is the point: installing a library in another Python is the most common mistake. For `requirements.txt` (next to the components, in the folder above, or the `requirements` option) it checks what is installed and the version specifiers (`==`, `>=`, `<`, ...); lines with environment markers, URLs and options such as `-r` are not checked.
 
 The same hint reaches the errors at run time. A call that fails with `ModuleNotFoundError`, or a worker that cannot start because of a missing library, carries `err.hint` (and it is appended to the stack): `"numpy" is not installed in the Python that runs the workers (/project/.venv/bin/python). Install it with: /project/.venv/bin/python -m pip install numpy`. Names that differ from the package (`sklearn` is `scikit-learn`, `cv2` is `opencv-python`, `PIL` is `Pillow`, ...) are translated.
 
@@ -1673,6 +1687,7 @@ TotalFusion runs your code in other processes. This page says what that protects
 
 - **A worker is not a sandbox**, except a [WebAssembly](webassembly.md) module. A Python, Rust or Go worker runs your code with your user's permissions, with your environment (pass `env` to restrict it), your file system and your network. Run only components you trust.
 - **A WebAssembly module is a sandbox, with limits.** It gets no files, no network, no environment and can import nothing but WASI, and that is tested. It is the sandbox of V8 and of WASI in Node.js: the host process has your permissions, so for code you do not trust at all, add a container or a user without privileges. See [WebAssembly](webassembly.md#what-the-sandbox-does).
+- **Describing a worker starts it.** The `doctor`, `fusion.describe()` and `fusion.register()` read the contracts without calling any function, but a Rust or Go binary is started with `--describe` (what its `main` does before it registers the functions does run) and a WebAssembly module is started by its host, which runs the code that registers its functions. A Python component is only parsed. Use binaries and modules that you trust, also to describe them.
 - **Nothing is downloaded, compiled or installed for you.** The worker of Python uses the standard library, and the libraries are yours. A Rust or a Go worker is a binary you built or got precompiled.
 - **Agents see only what you expose.** An action is an MCP tool only if its function says `mcp`. The MCP endpoint of Total.js (`CONF.$mcp = true`) has no authentication unless you add one (`Total.mcp.auth`): turn it on only on a machine you control, and put authentication in front of it before anything else.
 - **Total.js validates before your code runs.** The input, `query` and `params` are checked against the contract, and `permissions`, `user`, `sa` and `su` are enforced by the framework before the function is reached. Your function does not see the user.
@@ -1703,7 +1718,7 @@ Report it **privately**: open the *Security* tab of the repository and choose *R
 
 - A module of WebAssembly that gets out of its sandbox: it reads or writes a file, sees the environment, opens a connection or affects the process that runs it.
 - A malformed frame or a payload that crashes or exhausts the engine in Node.js.
-- A function that reads the contracts or the environment (`doctor`, `describe`, `register`) running code that the documentation says it does not run.
+- `doctor`, `describe` or `register` running more than the documentation says: a Python component that is imported, or a function of any runtime that is called, when only its contract was being read. (Starting a Rust or Go binary with `--describe`, or the host of a WebAssembly module, is documented.)
 - A message of an error that leaks to a client what the documentation says that it keeps in the log.
 
 ## What is not
@@ -1771,7 +1786,7 @@ The methods: `fusion.python(fn, args, options)`, `fusion.rust(...)` and `fusion.
 | `fusion.python(fn, args, options)` / `fusion.rust(...)` / `fusion.go(...)` / `fusion.wasm(...)` | Calls a function. Returns a promise. |
 | `fusion.call(runtime, fn, args, options)` | The same, with the runtime as an argument. |
 | `fusion.stream(runtime, fn, args, options)` / `fusion.python.stream(...)` / `fusion.rust.stream(...)` / `fusion.go.stream(...)` / `fusion.wasm.stream(...)` | Calls a function that sends chunks. Returns an async iterable with `.toArray()` and `.cancel()`. See [Streaming](streaming.md). |
-| `fusion.describe(runtime)` | The contracts of the functions, read without running them. |
+| `fusion.describe(runtime)` | The contracts of the functions, read without calling them. A Python component is parsed, not imported; a Rust or Go binary is started with `--describe`; a WebAssembly module is started by its host. |
 | `fusion.warmup(runtime)` | Starts all the workers and waits until they are ready. |
 | `fusion.watch(runtime, options)` | Replaces the workers when the code changes. See [Development](development.md). |
 | `fusion.doctor(runtime)` | Checks the environment. Returns `{ ok, checks, text }`. |
@@ -1847,7 +1862,7 @@ The JSON holds the structure of the message and the binary data travels raw afte
 
 ## Contracts
 
-A function declares what it takes and returns with `@action(...)` in Python or `.input()`/`.output()`... in Rust and `.Input()`/`.Output()`... in Go. The contract is read without running anything: Python is read as text (an AST), and a Rust or Go worker prints it with `--describe`. `fusion.describe(runtime)` returns it, and `fusion.register()` turns it into actions of Total.js.
+A function declares what it takes and returns with `@action(...)` in Python or `.input()`/`.output()`... in Rust and `.Input()`/`.Output()`... in Go. The contract is read **without calling any function**: Python is read as text (an AST) and never imported, a Rust or Go worker is started with `--describe` and prints it, and a WebAssembly module is started by its host, which asks it. A worker that starts also runs what its `main` does before it registers its functions. `fusion.describe(runtime)` returns it, and `fusion.register()` turns it into actions of Total.js.
 
 ## Adding a runtime
 
@@ -2294,7 +2309,7 @@ Each tutorial builds something small and real, step by step. Every one has an ap
 
 | | You will | Needs |
 |---|---|---|
-| [1. A Python function as an API and as a tool for an AI agent](01-python-action-and-mcp.md) | Write a function with a contract, serve it from Total.js with validation, offer it to an agent over MCP and edit it while it runs | Node.js 20, Python 3.9 |
+| [1. A Python function as an API and as a tool for an AI agent](01-python-action-and-mcp.md) | Write a function with a contract, serve it from Total.js with validation, offer it to an agent over MCP and edit it while it runs | Node.js 20, Python 3.9, and a Total.js 5 with the MCP endpoint for the part of the agent |
 | [2. Run the code of third parties in the sandbox of WebAssembly](02-wasm-sandbox.md) | Load modules of customers, watch a hostile one fail to read files, see the environment, write or connect, and cut off one that never returns | Node.js 20, Go 1.24 to build the modules |
 
 More are planned: stream the output of a model as Server-Sent Events, heavy work in Go or Rust without blocking Node.js, and a flow with alerts. They will be added here as they are written and tested.
@@ -2315,6 +2330,7 @@ The finished application is in [examples/tutorials/01-python-action-and-mcp](../
 
 - Node.js 20 or newer and Python 3.9 or newer.
 - This repository, and `npm install` in the folder of the tutorial (it installs Total.js 5 and links TotalFusion).
+- **A Total.js 5 that has the MCP endpoint, for step 5.** The endpoint is in the repository of Total.js 5 (version 0.0.20-1 was tested), but **not in the release 0.0.19 of the npm package**, which is what `npm install` gives today. With 0.0.19 everything works except step 5, and `npm run verify` says that it did not check the tool for agents. To try step 5, install Total.js 5 from a clone of its repository: `npm install /path/to/your/clone`.
 
 ```bash
 cd examples/tutorials/01-python-action-and-mcp
@@ -2371,7 +2387,7 @@ exports.install = function() {
 };
 ```
 
-`fusion.register()` reads the contracts of the folder `python/` **without running anything**, and creates a Total.js action for each function that declares one: `sentiment/analyze`. After that it is an action like any other: `ACTION('sentiment/analyze', ...)`, an API route, a Flow node. The second line is the route: a `POST` to `/api/` with `{ "schema": "sentiment_analyze", "data": ... }`.
+`fusion.register()` reads the contracts of the folder `python/` **without running anything** (Python parses the files and does not import them), and creates a Total.js action for each function that declares one: `sentiment/analyze`. After that it is an action like any other: `ACTION('sentiment/analyze', ...)`, an API route, a Flow node. The second line is the route: a `POST` to `/api/` with `{ "schema": "sentiment_analyze", "data": ... }`.
 
 ## 3. Call it
 
@@ -2711,7 +2727,7 @@ The first version.
 - **Development:** `fusion.watch()` replaces the workers when the code changes, and with Total.js the contracts are read again.
 - **Diagnosis:** `fusion.doctor()` and `npx totalfusion doctor` check the interpreter (or the Rust or Go binary), the components, the libraries and `requirements.txt` without importing or installing anything, and the errors at run time say how to install a missing library.
 
-Verified in GitHub Actions on Linux (Ubuntu with Node.js 20, 22 and 24 and Python 3.9 to 3.14), macOS and Windows: the whole suite, with the Python, Rust, Go and WebAssembly workers and the components for Flow. Also locally on macOS (Apple silicon) with Node.js 20, 22, 24 and 26, Python 3.9 to 3.15, Rust 1.99 and Go 1.21 and 1.27, and by hand in the designer of Flow 11.1. Not verified: a specific AI client against the MCP endpoint, and Flow in the cloud service of Total.js.
+Verified in GitHub Actions on Linux (Ubuntu with Node.js 20, 22 and 24 and Python 3.9 to 3.14), macOS and Windows: the whole suite, with the Python, Rust, Go and WebAssembly workers and the components for Flow. Also locally on macOS (Apple silicon) with Node.js 20, 22, 24 and 26, Python 3.9 to 3.15, Rust 1.99 and Go 1.21 and 1.27, and by hand in the designer of Flow 11.1. The MCP endpoint is not in the release 0.0.19 of `total5` in npm, so it was verified against the development version (0.0.20-1) on macOS, not in GitHub Actions. Not verified: a specific AI client against the MCP endpoint, and Flow in the cloud service of Total.js.
 
 ---
 

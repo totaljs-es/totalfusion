@@ -118,7 +118,7 @@ Version 0.1.0, not published. The whole test suite (more than 410 tests: Python,
 | Go | The stable toolchain of the runners on the three systems, and locally with Go 1.21 and 1.27 (the module with the race detector, and the 62 tests of its worker) |
 | WebAssembly | GitHub Actions on the three systems (Node.js 20, 22 and 24 on Linux), and locally with Node.js 26: the 50 tests of the module, including a module that tries to get out |
 | Flow | The test harness of Total.js on the three systems, and by hand in the designer of Flow 11.1 on macOS |
-| Total.js | `total5` from npm in GitHub Actions, and also the 0.0.20 development version locally |
+| Total.js | `total5` from npm (0.0.19) in GitHub Actions, and the development version 0.0.20-1 locally. **The MCP endpoint is not in 0.0.19**, so it is checked only against the development version, on macOS |
 
 Python 3.15 and the combinations that are not in the matrix of [.github/workflows/test.yml](.github/workflows/test.yml) were run only locally.
 

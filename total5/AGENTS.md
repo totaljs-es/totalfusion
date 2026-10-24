@@ -4,7 +4,7 @@ How the functions of a worker become part of a Total.js application: `index.js` 
 
 ## register and sse
 
-- `fusion.register()` reads the contracts (`fusion.describe()`, without running anything) and creates a `NEWACTION()` for each function that declares one. `input`, `query`, `params`, `permissions`, `user`, `sa` and `su` are validated by the framework before the function runs; `mcp` makes it a tool of the MCP endpoint.
+- `fusion.register()` reads the contracts (`fusion.describe()`, without calling any function: Python is parsed and never imported; a Rust or Go binary is started with `--describe`; a WebAssembly module is started by its host) and creates a `NEWACTION()` for each function that declares one. `input`, `query`, `params`, `permissions`, `user`, `sa` and `su` are validated by the framework before the function runs; `mcp` makes it a tool of the MCP endpoint.
 - **Total.js splits the fields of a schema on commas, even inside a `// comment`:** `lint()` warns about it. A field that is optional and arrives with an invalid value is dropped silently; use `*` to require it.
 - Only the message of a `ValueError` (or `Invalid`, `Error::invalid`) reaches the client; any other failure is logged through `onerror` and answers "The action failed".
 - `fusion.sse($, stream)` sends `data: <json>` for each chunk, `event: end` and `event: error`, and cancels the stream when the response closes.
