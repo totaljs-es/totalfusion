@@ -2,7 +2,7 @@
 
 > TotalFusion extends Total.js 5 with other runtimes: functions written in Python, Rust, Go and WebAssembly are called from Node.js and Total.js as `async` functions, and become actions, API routes, MCP tools for AI agents, Server-Sent Events and nodes of Flow. Each runtime is a pool of worker processes that Node.js supervises; a crash in a worker never takes the application down. A WebAssembly module runs in a sandbox: no files, no network, no environment.
 
-Node.js 20 or newer, no dependencies, plain JavaScript (no TypeScript). Version 0.1.0, not on npm yet: install it from a clone with `npm install ../totalfusion`. The engine (`require('totalfusion')`) does not depend on Total.js; `fusion.register()`, `fusion.sse()` and `fusion.flow()` do. Nothing is downloaded, compiled or installed for the user. MIT license.
+Node.js 20 or newer, no dependencies, plain JavaScript (no TypeScript). Version 0.1.0: install it with `npm install totalfusion`. The engine (`require('totalfusion')`) does not depend on Total.js; `fusion.register()`, `fusion.sse()` and `fusion.flow()` do. Nothing is downloaded, compiled or installed for the user. MIT license.
 
 ---
 
@@ -72,13 +72,11 @@ A process per call costs about 17.6 ms to start. A worker that is already runnin
 
 ## Install
 
-TotalFusion is **not on npm yet**. From a clone of the repository:
-
 ```bash
-npm install ../totalfusion
+npm install totalfusion
 ```
 
-Once published it will be `npm install totalfusion`. It needs Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. Rust and Go are needed only to build a worker in that language. **TotalFusion never installs, downloads or compiles anything for you.** → [Getting started](docs/getting-started.md)
+It needs Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. Rust and Go are needed only to build a worker in that language. **TotalFusion never installs, downloads or compiles anything for you.** → [Getting started](docs/getting-started.md)
 
 ## Documentation
 
@@ -117,7 +115,7 @@ All of them run from a clone of the repository:
 
 ## Status
 
-Version 0.1.0, not published. The whole test suite (more than 410 tests: Python, Rust, Go, WebAssembly and the components for Flow) **passes in GitHub Actions on Linux, macOS and Windows**, and it was run locally on macOS as well:
+Version 0.1.0. The whole test suite (more than 410 tests: Python, Rust, Go, WebAssembly and the components for Flow) **passes in GitHub Actions on Linux, macOS and Windows**, and it was run locally on macOS as well:
 
 | | Where it has run |
 |---|---|
@@ -158,13 +156,13 @@ Guidance for AI coding agents. The first part is for an agent that **uses** Tota
 
 TotalFusion extends Total.js 5 with other runtimes: functions written in **Python, Rust, Go and WebAssembly** are called from Node.js as `async` functions, and become Total.js actions, API routes, MCP tools, Server-Sent Events and nodes of Flow. Each runtime is a pool of worker processes that Node.js supervises; a crash in a worker never takes the application down. The engine (`require('totalfusion')`) does not depend on Total.js; `fusion.register()`, `fusion.sse()` and `fusion.flow()` do.
 
-Package name: `totalfusion` (version 0.1.0, not on npm yet)
+Package name: `totalfusion` (version 0.1.0)
 Node.js: 20 or newer. No dependencies. Plain JavaScript, no TypeScript (Total.js does not support it: never add types or `.d.ts`).
 License: MIT
 
 ## Using it
 
-Install from a clone while it is not on npm: `npm install ../totalfusion`. The documentation is in `docs/` (start with `docs/getting-started.md`, the tutorials in `docs/tutorials/`, the options in `docs/reference.md`).
+Install it with `npm install totalfusion`. The documentation is in `docs/` (start with `docs/getting-started.md`, the tutorials in `docs/tutorials/`, the options in `docs/reference.md`).
 
 ```js
 const fusion = require('totalfusion');   // in a Total.js definition: REQUIRE('totalfusion')
@@ -335,13 +333,11 @@ See the official OpenAI documentation on [AGENTS.md](https://learn.chatgpt.com/d
 
 ## 1. Install
 
-TotalFusion is **not on npm yet**. From a clone of the repository, install it by its path:
-
 ```bash
-npm install ../totalfusion          # or "totalfusion": "file:../totalfusion" in your package.json
+npm install totalfusion
 ```
 
-Once it is published it will be `npm install totalfusion`. You need Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. Rust and Go are needed only to **build** a worker in that language, never to run one.
+You need Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. Rust and Go are needed only to **build** a worker in that language, never to run one.
 
 ## 2. Your first function, in any Node.js program
 
@@ -2793,7 +2789,7 @@ A runtime is an adapter plus a worker that speaks the protocol of `lib/protocol.
 A release is published to npm by `.github/workflows/publish.yml` when a release is published on GitHub. It runs the tests first, then `node scripts/release-check.js <tag>` (the tag has to be `v<version>`, the version has to be the same in `package.json`, `rust/Cargo.toml` and `go/app.go`, and `CHANGELOG.md` needs its heading), and then `npm publish`.
 
 1. Change the version in those three files, add the heading to `CHANGELOG.md`, run `npm run generate` and wait for the continuous integration to pass.
-2. **The first time only:** remove `"private": true` from `package.json` and change the texts that say that the package is not on npm (`tests/release.test.js` says which), and publish the first version either by hand (`npm publish --access public`) or by adding the secret `NPM_TOKEN` to the repository. Then, in the settings of the package on npmjs.com, add a trusted publisher: GitHub Actions, this repository, the workflow `publish.yml`. From then on no secret is needed, and npm adds the provenance of the package (it needs a public repository).
+2. **The first time only:** publish the first version either by hand (`npm publish --access public`) or by adding the secret `NPM_TOKEN` to the repository. Then, in the settings of the package on npmjs.com, add a trusted publisher: GitHub Actions, this repository, the workflow `publish.yml`. From then on no secret is needed, and npm adds the provenance of the package (it needs a public repository).
 3. Create a release on GitHub with the tag `v<version>`: the workflow publishes it.
 
 ## Style

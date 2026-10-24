@@ -2,13 +2,11 @@
 
 ## 1. Install
 
-TotalFusion is **not on npm yet**. From a clone of the repository, install it by its path:
-
 ```bash
-npm install ../totalfusion          # or "totalfusion": "file:../totalfusion" in your package.json
+npm install totalfusion
 ```
 
-Once it is published it will be `npm install totalfusion`. You need Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. Rust and Go are needed only to **build** a worker in that language, never to run one.
+You need Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. Rust and Go are needed only to **build** a worker in that language, never to run one.
 
 ## 2. Your first function, in any Node.js program
 

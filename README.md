@@ -62,13 +62,11 @@ A process per call costs about 17.6 ms to start. A worker that is already runnin
 
 ## Install
 
-TotalFusion is **not on npm yet**. From a clone of the repository:
-
 ```bash
-npm install ../totalfusion
+npm install totalfusion
 ```
 
-Once published it will be `npm install totalfusion`. It needs Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. Rust and Go are needed only to build a worker in that language. **TotalFusion never installs, downloads or compiles anything for you.** → [Getting started](docs/getting-started.md)
+It needs Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. Rust and Go are needed only to build a worker in that language. **TotalFusion never installs, downloads or compiles anything for you.** → [Getting started](docs/getting-started.md)
 
 ## Documentation
 
@@ -107,7 +105,7 @@ All of them run from a clone of the repository:
 
 ## Status
 
-Version 0.1.0, not published. The whole test suite (more than 410 tests: Python, Rust, Go, WebAssembly and the components for Flow) **passes in GitHub Actions on Linux, macOS and Windows**, and it was run locally on macOS as well:
+Version 0.1.0. The whole test suite (more than 410 tests: Python, Rust, Go, WebAssembly and the components for Flow) **passes in GitHub Actions on Linux, macOS and Windows**, and it was run locally on macOS as well:
 
 | | Where it has run |
 |---|---|
