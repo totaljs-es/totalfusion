@@ -5,6 +5,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The workflow that publishes to npm runs the same tests first
+  workflow_call:
 
 jobs:
   test:

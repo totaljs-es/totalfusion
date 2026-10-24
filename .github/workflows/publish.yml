@@ -1,0 +1,61 @@
+name: publish
+
+# Publishes the package to npm when a release is published on GitHub. The tag of the release has to be v<version> of package.json.
+# It needs ONE of these, set up once (see "Releasing" in CONTRIBUTING.md):
+#   - a trusted publisher for this workflow on npmjs.com: no secret at all, and npm adds the provenance by itself, or
+#   - the secret NPM_TOKEN of the repository (it is needed for the very first release, because a trusted publisher is set up on a package that exists).
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  # The same tests that run on every push, on every system
+  tests:
+    uses: ./.github/workflows/test.yml
+
+  publish:
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      # The identity of this workflow: it is what trusted publishing and the provenance of the package are made of
+      id-token: write
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      # The version, the tag, the changelog and "private": it says what is wrong, before anything is published
+      - run: node scripts/release-check.js "$GITHUB_REF_NAME"
+
+      # The files that are generated from the pages are up to date, and the package has what it must
+      - run: npm run check
+
+      - run: npm pack --dry-run
+
+      # Trusted publishing needs npm 11.5.1 or newer
+      - name: npm for trusted publishing
+        if: env.NPM_TOKEN == ''
+        run: |
+          npm install --global npm@^11.5.1
+          npm --version
+
+      - name: Publish with the token
+        if: env.NPM_TOKEN != ''
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish with trusted publishing
+        if: env.NPM_TOKEN == ''
+        run: npm publish --access public

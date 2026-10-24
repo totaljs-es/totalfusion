@@ -52,6 +52,14 @@ A change should come with tests. When you fix something, check that the test fai
 
 A runtime is an adapter plus a worker that speaks the protocol of `lib/protocol.js` over its standard input and output (`ready`, `call`, `chunk`, `res`, `credit`, `cancel`, `ping`/`pong`, `bye`). The adapter exports `create(config)` (returns a `Pool`), `describe(config)`, `doctor(config)` and `watchTarget(config)`, and is added to `ADAPTERS` in `index.js`. The Rust and the Go adapters are the shortest examples. A worker must answer a `pong` with its memory and must not use its standard output for anything else.
 
+## Releasing
+
+A release is published to npm by `.github/workflows/publish.yml` when a release is published on GitHub. It runs the tests first, then `node scripts/release-check.js <tag>` (the tag has to be `v<version>`, the version has to be the same in `package.json`, `rust/Cargo.toml` and `go/app.go`, and `CHANGELOG.md` needs its heading), and then `npm publish`.
+
+1. Change the version in those three files, add the heading to `CHANGELOG.md`, run `npm run generate` and wait for the continuous integration to pass.
+2. **The first time only:** remove `"private": true` from `package.json` and change the texts that say that the package is not on npm (`tests/release.test.js` says which), and publish the first version either by hand (`npm publish --access public`) or by adding the secret `NPM_TOKEN` to the repository. Then, in the settings of the package on npmjs.com, add a trusted publisher: GitHub Actions, this repository, the workflow `publish.yml`. From then on no secret is needed, and npm adds the provenance of the package (it needs a public repository).
+3. Create a release on GitHub with the tag `v<version>`: the workflow publishes it.
+
 ## Style
 
 Plain JavaScript in the style of Total.js: tabs, `'use strict'`, no dependencies, no TypeScript. Rust follows `rustfmt` and Go follows `gofmt`. Keep the documentation honest: say what was measured and where, and what was not verified.
