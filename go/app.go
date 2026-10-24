@@ -255,6 +255,14 @@ loop:
 		frame, parts, err := readFrame(reader)
 
 		if err != nil {
+
+			// Node.js closed the pipe: it is done with this worker. Anything else is a failure that must not be silent.
+			if err != io.EOF {
+				fmt.Fprintln(os.Stderr, "totalfusion: cannot read from Node.js:", err)
+				calls.cancelAll()
+				os.Exit(1)
+			}
+
 			break
 		}
 
@@ -454,8 +462,9 @@ func (w *writer) send(message any, parts [][]byte) {
 	err := writeFrame(w.out, message, parts)
 	w.mutex.Unlock()
 
-	// If Node.js is gone nobody reads the answer: the worker is done
+	// If Node.js is gone nobody reads the answer and the worker is done, but it says why it stops
 	if err != nil {
-		os.Exit(0)
+		fmt.Fprintln(os.Stderr, "totalfusion: cannot write to Node.js:", err)
+		os.Exit(1)
 	}
 }

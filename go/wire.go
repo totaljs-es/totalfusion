@@ -24,6 +24,43 @@ const (
 
 var errInvalidFrame = errors.New("invalid frame")
 
+// A single read or write never asks the system for more than this. Windows can fail a call on a pipe with a very big buffer
+// (ERROR_NO_SYSTEM_RESOURCES), and a few megabytes in pieces cost nothing.
+const ioChunk = 1 << 20
+
+// readFull fills buf, asking the reader for at most ioChunk bytes at a time.
+func readFull(reader io.Reader, buf []byte) error {
+
+	for len(buf) > 0 {
+
+		size := min(len(buf), ioChunk)
+		read, err := io.ReadFull(reader, buf[:size])
+		buf = buf[read:]
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// writeAll writes data, giving the writer at most ioChunk bytes at a time.
+func writeAll(writer io.Writer, data []byte) error {
+
+	for len(data) > 0 {
+
+		written, err := writer.Write(data[:min(len(data), ioChunk)])
+		data = data[written:]
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func invalidFrame(what string) error {
 	return fmt.Errorf("%w: %s", errInvalidFrame, what)
 }
@@ -48,7 +85,7 @@ func readFrame(reader *bufio.Reader) (any, [][]byte, error) {
 
 	body := make([]byte, total)
 
-	if _, err := io.ReadFull(reader, body); err != nil {
+	if err := readFull(reader, body); err != nil {
 		return nil, nil, err
 	}
 
@@ -201,16 +238,15 @@ func writeFrame(writer io.Writer, message any, parts [][]byte) error {
 			head = append(head, part...)
 		}
 
-		_, err = writer.Write(head)
-		return err
+		return writeAll(writer, head)
 	}
 
-	if _, err = writer.Write(head); err != nil {
+	if err = writeAll(writer, head); err != nil {
 		return err
 	}
 
 	for _, part := range parts {
-		if _, err = writer.Write(part); err != nil {
+		if err = writeAll(writer, part); err != nil {
 			return err
 		}
 	}

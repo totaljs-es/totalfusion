@@ -128,3 +128,71 @@ func TestHTMLCharactersAreNotEscaped(t *testing.T) {
 		t.Fatalf("%s %v", data, err)
 	}
 }
+
+// A pipe of Windows can refuse a call with a big buffer: these refuse any read or write of more than one chunk
+type pickyReader struct{ reader io.Reader }
+
+func (p pickyReader) Read(buf []byte) (int, error) {
+	if len(buf) > ioChunk {
+		return 0, errors.New("Insufficient system resources exist to complete the requested service")
+	}
+	return p.reader.Read(buf)
+}
+
+type pickyWriter struct{ buffer bytes.Buffer }
+
+func (p *pickyWriter) Write(data []byte) (int, error) {
+	if len(data) > ioChunk {
+		return 0, errors.New("Insufficient system resources exist to complete the requested service")
+	}
+	return p.buffer.Write(data)
+}
+
+func TestABigFrameIsReadInPieces(t *testing.T) {
+
+	var buffer bytes.Buffer
+	big := bytes.Repeat([]byte{7}, 5*ioChunk+123)
+
+	if err := writeFrame(&buffer, map[string]any{"n": 1}, [][]byte{big}); err != nil {
+		t.Fatal(err)
+	}
+
+	// the same buffer that the worker uses to read the standard input
+	source := bufio.NewReaderSize(pickyReader{&buffer}, 1<<20)
+	_, parts, err := readFrame(source)
+
+	if err != nil || len(parts) != 1 || !bytes.Equal(parts[0], big) {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestABigFrameIsWrittenInPieces(t *testing.T) {
+
+	var picky pickyWriter
+	big := bytes.Repeat([]byte{9}, 5*ioChunk+123)
+
+	if err := writeFrame(&picky, map[string]any{"n": 1}, [][]byte{big, {1}}); err != nil {
+		t.Fatal(err)
+	}
+
+	_, parts, err := readFrame(reader(picky.buffer.Bytes()))
+
+	if err != nil || len(parts) != 2 || !bytes.Equal(parts[0], big) || !bytes.Equal(parts[1], []byte{1}) {
+		t.Fatalf("%v", err)
+	}
+}
+
+type shortWriter struct{ buffer bytes.Buffer }
+
+func (s *shortWriter) Write(data []byte) (int, error) {
+	return s.buffer.Write(data[:min(len(data), 3)])
+}
+
+func TestAWriterThatWritesLessIsAsked_AgainForTheRest(t *testing.T) {
+
+	var short shortWriter
+
+	if err := writeAll(&short, []byte("0123456789")); err != nil || short.buffer.String() != "0123456789" {
+		t.Fatalf("%q %v", short.buffer.String(), err)
+	}
+}
