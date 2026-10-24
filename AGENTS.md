@@ -6,7 +6,7 @@ Guidance for AI coding agents. The first part is for an agent that **uses** Tota
 
 TotalFusion extends Total.js 5 with other runtimes: functions written in **Python, Rust, Go and WebAssembly** are called from Node.js as `async` functions, and become Total.js actions, API routes, MCP tools, Server-Sent Events and nodes of Flow. Each runtime is a pool of worker processes that Node.js supervises; a crash in a worker never takes the application down. The engine (`require('totalfusion')`) does not depend on Total.js; `fusion.register()`, `fusion.sse()` and `fusion.flow()` do.
 
-Package name: `totalfusion` (version 0.1.0)
+Package name: `totalfusion` (version 0.1.1)
 Node.js: 20 or newer. No dependencies. Plain JavaScript, no TypeScript (Total.js does not support it: never add types or `.d.ts`).
 License: MIT
 

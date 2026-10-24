@@ -12,7 +12,7 @@ import (
 )
 
 // Version is the version of this module. It travels in the messages of the protocol and in --describe.
-const Version = "0.1.0"
+const Version = "0.1.1"
 
 // Memory is the memory of this process in bytes, and false when the system does not allow to know it.
 //

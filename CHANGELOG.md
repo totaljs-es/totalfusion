@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1
+
+The first version published with trusted publishing (no token), and the texts of the package page.
+
+- **npm:** the README links to the package page and shows its version; the first sentence names the four runtimes.
+- **Publishing:** a release is published to npm by the workflow with trusted publishing, which also adds the provenance of the package.
+- **Continuous integration:** a change that only touches documentation runs the checks of the texts; a change to code, and every release, runs the whole matrix.
+- No change in the code of the runtimes.
+
 ## 0.1.0
 
 The first version.

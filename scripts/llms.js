@@ -15,7 +15,7 @@ const BASE = 'https://raw.githubusercontent.com/totaljs-es/totalfusion/main/';
 
 const SUMMARY = 'TotalFusion extends Total.js 5 with other runtimes: functions written in Python, Rust, Go and WebAssembly are called from Node.js and Total.js as `async` functions, and become actions, API routes, MCP tools for AI agents, Server-Sent Events and nodes of Flow. Each runtime is a pool of worker processes that Node.js supervises; a crash in a worker never takes the application down. A WebAssembly module runs in a sandbox: no files, no network, no environment.';
 
-const DETAILS = 'Node.js 20 or newer, no dependencies, plain JavaScript (no TypeScript). Version 0.1.0: install it with `npm install totalfusion`. The engine (`require(\'totalfusion\')`) does not depend on Total.js; `fusion.register()`, `fusion.sse()` and `fusion.flow()` do. Nothing is downloaded, compiled or installed for the user. MIT license.';
+const DETAILS = 'Node.js 20 or newer, no dependencies, plain JavaScript (no TypeScript). Version 0.1.1: install it with `npm install totalfusion`. The engine (`require(\'totalfusion\')`) does not depend on Total.js; `fusion.register()`, `fusion.sse()` and `fusion.flow()` do. Nothing is downloaded, compiled or installed for the user. MIT license.';
 
 // Every page, in the order in which it is read: [section, file, title, what it says]
 const PAGES = [

@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-TotalFusion is at version 0.1.0, and the latest release is the one that is supported.
+TotalFusion is at version 0.1.1, and the latest release is the one that is supported.
 
 ## Reporting a vulnerability
 

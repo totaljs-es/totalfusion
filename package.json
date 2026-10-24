@@ -1,6 +1,6 @@
 {
 	"name": "totalfusion",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Extends Total.js with Python, Rust, Go and WebAssembly: supervised workers, contracts that become actions and MCP tools, streaming, binary data and development reload.",
 	"keywords": [
 		"totaljs",

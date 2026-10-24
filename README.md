@@ -107,7 +107,7 @@ All of them run from a clone of the repository:
 
 ## Status
 
-Version 0.1.0. The whole test suite (more than 410 tests: Python, Rust, Go, WebAssembly and the components for Flow) **passes in GitHub Actions on Linux, macOS and Windows**, and it was run locally on macOS as well:
+Version 0.1.1. The whole test suite (more than 410 tests: Python, Rust, Go, WebAssembly and the components for Flow) **passes in GitHub Actions on Linux, macOS and Windows**, and it was run locally on macOS as well:
 
 | | Where it has run |
 |---|---|
