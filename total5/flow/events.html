@@ -1,0 +1,42 @@
+<script total>
+
+	exports.id = 'fusionevents';
+	exports.name = 'Events';
+	exports.icon = 'ti ti-bell';
+	exports.author = 'TotalFusion';
+	exports.version = '2';
+	exports.group = 'TotalFusion';
+	exports.config = { events: 'worker:exit,worker:recycle,worker:unresponsive,call:retry,reload', runtime: 'all' };
+	exports.inputs = [];
+	exports.outputs = [{ id: 'event', name: 'Event' }];
+
+	// The logic is in total5/flow.js: it uses the same pool of workers as the rest of the application
+	exports.make = require('totalfusion').flow('events');
+
+</script>
+
+<readme>
+Sends a message for every event of the workers that you choose: `worker:ready`, `worker:exit`, `worker:recycle`, `worker:unresponsive`, `call:retry` and `reload`. The message has the `event`, when it `at` happened and the data of the event (`runtime`, `pid`, `reason`...). Use it to warn somebody when a worker stops answering or to keep a log.
+</readme>
+
+<settings>
+	<div class="padding">
+		<ui-component name="input" path="?.events" config="monospace:1;required:1" class="m">Events (separated by commas)</ui-component>
+		<ui-component name="input" path="?.runtime" config="dirsource:all|All runtimes,python|Python,rust|Rust,go|Go,wasm|WebAssembly" class="m">Runtime</ui-component>
+	</div>
+</settings>
+
+<style>
+	.CLASS ui-bind { padding: 10px; font-size: 12px; border-top: 1px solid rgba(0,0,0,0.1); }
+</style>
+
+<body>
+	<header>
+		<i class="$ICON"></i>$NAME
+	</header>
+	<ui-bind path="$STATUS" config="template;show" class="block">
+		<script type="text/html">
+			<div>{{ value.count }} events{{ if value.last }}, last: {{ value.last }}{{ fi }}</div>
+		</script>
+	</ui-bind>
+</body>

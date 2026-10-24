@@ -28,6 +28,8 @@ CI installs NumPy for each Python version and enables these tests too.
 
 The documentation is tested too (`tests/docs.test.js` checks that every link and anchor leads somewhere and that every page is reachable from `docs/README.md`), so change it together with the code.
 
+After a change in a component of Flow (`total5/flow/*.html`) run `node scripts/flow-db.js --write` to update `total5/flow/db.json`; a test fails if it is out of date. The icons have to be in the icon font of Flow, not any icon of Tabler.
+
 A change should come with tests. When you fix something, check that the test fails without the fix.
 
 ## How it is organised
@@ -39,7 +41,7 @@ A change should come with tests. When you fix something, check that the test fai
 | `rust/` | The Rust adapter (`index.js`) and the `totalfusion` crate (`src/`). |
 | `go/` | The Go adapter (`index.js`) and the `totalfusion` module (`*.go`). |
 | `wasm/` | The WebAssembly adapter (`index.js`) and the host process that runs a module in a sandbox (`host.js`). The SDK of Go for it is `go/wasm*.go`. |
-| `total5/` | The integration with Total.js 5: actions, MCP, Server-Sent Events and the FlowStream component. |
+| `total5/` | The integration with Total.js 5: actions, MCP, Server-Sent Events and the components of Flow (`flow/*.html`, with their logic in `flow.js`). |
 | `tests/` | The tests, and the components and workers they run. |
 
 ## Adding a runtime

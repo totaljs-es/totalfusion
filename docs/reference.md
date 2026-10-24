@@ -59,6 +59,7 @@ The methods: `fusion.python(fn, args, options)`, `fusion.rust(...)` and `fusion.
 | `fusion.doctor(runtime)` | Checks the environment. Returns `{ ok, checks, text }`. |
 | `fusion.register(options)` | Total.js: registers the functions with a contract as actions. See [Total.js 5](total5.md). |
 | `fusion.sse($, stream)` | Total.js: sends a stream to the browser as Server-Sent Events. |
+| `fusion.flow(kind, runtime)` | Total.js Flow: the function `make` of a component (`call`, `stream`, `events` or `stats`). The components of [Flow](flow.md) use it. |
 | `fusion.stats()` | What every pool is doing. See [Working with the workers](workers.md). |
 | `fusion.on(event, fn)` | The events of the workers. See [Observing the workers](workers.md#observing-the-workers). |
 | `fusion.shutdown()` | Stops the workers. They also end by themselves if the process exits. |

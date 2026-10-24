@@ -1,0 +1,86 @@
+[
+	{
+		"id": "fusionpython",
+		"group": "TotalFusion",
+		"name": "Python",
+		"url": "https://raw.githubusercontent.com/totaljs-es/totalfusion/main/total5/flow/python.html",
+		"author": "TotalFusion",
+		"icon": "ti ti-python",
+		"color": "",
+		"version": "2",
+		"kind": "",
+		"readme": "Calls a function of a Python component of TotalFusion with the data of the message and sends the result to the first output. A failure goes to the second output with a `code` and a `message` (the first line of the error, without the traceback: do not connect that output straight to a public response)."
+	},
+	{
+		"id": "fusionrust",
+		"group": "TotalFusion",
+		"name": "Rust",
+		"url": "https://raw.githubusercontent.com/totaljs-es/totalfusion/main/total5/flow/rust.html",
+		"author": "TotalFusion",
+		"icon": "ti ti-microchip",
+		"color": "",
+		"version": "2",
+		"kind": "",
+		"readme": "Calls a function of a Rust worker of TotalFusion with the data of the message and sends the result to the first output. A failure goes to the second output with a `code` and a `message` (the first line of the error, without the traceback: do not connect that output straight to a public response)."
+	},
+	{
+		"id": "fusiongo",
+		"group": "TotalFusion",
+		"name": "Go",
+		"url": "https://raw.githubusercontent.com/totaljs-es/totalfusion/main/total5/flow/go.html",
+		"author": "TotalFusion",
+		"icon": "ti ti-server",
+		"color": "",
+		"version": "2",
+		"kind": "",
+		"readme": "Calls a function of a Go worker of TotalFusion with the data of the message and sends the result to the first output. A failure goes to the second output with a `code` and a `message` (the first line of the error, without the traceback: do not connect that output straight to a public response)."
+	},
+	{
+		"id": "fusionwasm",
+		"group": "TotalFusion",
+		"name": "WebAssembly",
+		"url": "https://raw.githubusercontent.com/totaljs-es/totalfusion/main/total5/flow/wasm.html",
+		"author": "TotalFusion",
+		"icon": "ti ti-shield-check",
+		"color": "",
+		"version": "2",
+		"kind": "",
+		"readme": "Calls a function of a WebAssembly module, which runs in a sandbox of TotalFusion with the data of the message and sends the result to the first output. A failure goes to the second output with a `code` and a `message` (the first line of the error, without the traceback: do not connect that output straight to a public response)."
+	},
+	{
+		"id": "fusionstream",
+		"group": "TotalFusion",
+		"name": "Stream",
+		"url": "https://raw.githubusercontent.com/totaljs-es/totalfusion/main/total5/flow/stream.html",
+		"author": "TotalFusion",
+		"icon": "ti ti-stream",
+		"color": "",
+		"version": "2",
+		"kind": "",
+		"readme": "Calls a function that sends chunks (a Python generator or a stream function of Rust or Go) with the data of the message. **Every chunk is a message** on the first output, in order; when the stream ends, one message with `{ chunks, cancelled }` goes to the second output, and a failure goes to the third with a `code` and a `message`. The input `Stop` cancels the streams that are running, and so does stopping the flow. The timeout is the longest time without a new chunk."
+	},
+	{
+		"id": "fusionevents",
+		"group": "TotalFusion",
+		"name": "Events",
+		"url": "https://raw.githubusercontent.com/totaljs-es/totalfusion/main/total5/flow/events.html",
+		"author": "TotalFusion",
+		"icon": "ti ti-bell",
+		"color": "",
+		"version": "2",
+		"kind": "",
+		"readme": "Sends a message for every event of the workers that you choose: `worker:ready`, `worker:exit`, `worker:recycle`, `worker:unresponsive`, `call:retry` and `reload`. The message has the `event`, when it `at` happened and the data of the event (`runtime`, `pid`, `reason`...). Use it to warn somebody when a worker stops answering or to keep a log."
+	},
+	{
+		"id": "fusionstats",
+		"group": "TotalFusion",
+		"name": "Stats",
+		"url": "https://raw.githubusercontent.com/totaljs-es/totalfusion/main/total5/flow/stats.html",
+		"author": "TotalFusion",
+		"icon": "ti ti-chart-bar",
+		"color": "",
+		"version": "2",
+		"kind": "",
+		"readme": "Sends what the pools of workers are doing (workers, calls, queue, recycled workers, memory of each worker) when a message arrives, and every N seconds if you set it. It is `fusion.stats()`, one entry for each runtime that has started."
+	}
+]

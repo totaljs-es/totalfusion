@@ -45,6 +45,7 @@
 		"lib",
 		"python",
 		"total5",
+		"scripts/flow-db.js",
 		"rust/index.js",
 		"rust/Cargo.toml",
 		"rust/README.md",

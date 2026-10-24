@@ -36,7 +36,8 @@ Total.js validates the input against the contract before Python runs. The engine
 
 - **Python, Rust and Go workers** that Node.js supervises: a pool of long-lived processes, correlated calls, timeouts, cancellation and real errors (with the traceback in Python). A crash in a worker never takes your application down. → [Python](docs/python.md), [Rust](docs/rust.md), [Go](docs/go.md)
 - **A sandbox**: a WebAssembly module runs without files, network or environment, in one file that works on any system. → [WebAssembly](docs/webassembly.md)
-- **Total.js integration**: the functions that declare a contract become actions with validated `input`, `query` and `params`, permissions, API routes, MCP tools, Server-Sent Events and a FlowStream component. → [Total.js 5](docs/total5.md)
+- **Total.js integration**: the functions that declare a contract become actions with validated `input`, `query` and `params`, permissions, API routes, MCP tools, and Server-Sent Events. → [Total.js 5](docs/total5.md)
+- **Seven components for Flow**: call a function of any runtime from a node, stream chunks as messages, send the events of the workers to an alert and read the stats. They were run in the designer of Flow. → [Flow](docs/flow.md)
 - **Binary data without base64**: `Buffer` and typed arrays travel as raw bytes in both directions, NumPy arrays included. A 100 MB buffer makes the round trip in 43 ms. → [Binary data](docs/binary-data.md)
 - **Streaming** with backpressure and cancellation: a generator in Python or a stream function in Rust or Go is an async iterable. → [Streaming](docs/streaming.md)
 - **Several calls at once** in one worker, for calls that wait, and for the threads of a Rust worker or the goroutines of a Go one. → [Working with the workers](docs/workers.md)
@@ -74,7 +75,7 @@ Once published it will be `npm install totalfusion`. It needs Node.js 20 or newe
 | [Getting started](docs/getting-started.md) | Install it, call your first function, make it an action. |
 | [Use cases](docs/use-cases.md) | What it is good for, with the numbers that were measured. |
 | [Python](docs/python.md) · [Rust](docs/rust.md) · [Go](docs/go.md) | One page per runtime. |
-| [Total.js 5](docs/total5.md) | Actions, validation, permissions, MCP, SSE, FlowStream. |
+| [Total.js 5](docs/total5.md) · [Flow](docs/flow.md) | Actions, validation, permissions, MCP, SSE. The components for Flow. |
 | [Binary data](docs/binary-data.md) · [Streaming](docs/streaming.md) | The two big features of the transfer. |
 | [Working with the workers](docs/workers.md) | Concurrency, recycling, health check, events, retrying. |
 | [Errors and cancellation](docs/errors.md) | The error codes. |
@@ -116,7 +117,7 @@ Version 0.1.0, not published. The test suite **passed in GitHub Actions on Linux
 
 Python 3.15 and the combinations that are not in the matrix of [.github/workflows/test.yml](.github/workflows/test.yml) were run only locally.
 
-Not verified: the FlowStream component inside the Flow designer (it was run with the test harness of Total.js), and Go and WebAssembly on Linux and Windows.
+Not verified: Go and WebAssembly on Linux and Windows, and the components for Flow on Windows and Linux (they were run in the designer of Flow 11.1 on macOS).
 
 ## Contributing
 

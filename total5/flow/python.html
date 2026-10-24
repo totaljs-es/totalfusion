@@ -1,55 +1,29 @@
 <script total>
 
-	exports.id = 'python';
+	exports.id = 'fusionpython';
 	exports.name = 'Python';
-	exports.icon = 'ti ti-brand-python';
+	exports.icon = 'ti ti-python';
 	exports.author = 'TotalFusion';
-	exports.version = '1';
+	exports.version = '2';
 	exports.group = 'TotalFusion';
-	exports.config = { fn: '', timeout: 30000 };
+	exports.config = { fn: '', timeout: 30000, idempotent: false };
 	exports.inputs = [{ id: 'input', name: 'Input' }];
 	exports.outputs = [{ id: 'output', name: 'Result' }, { id: 'error', name: 'Error' }];
 
-	exports.make = function(instance, config) {
-
-		// The same pool of workers as the rest of the application
-		const fusion = require('totalfusion');
-		const status = { calls: 0, errors: 0, error: '' };
-
-		instance.message = function($) {
-
-			if (!config.fn) {
-				status.error = 'No function';
-				instance.status(status);
-				$.send('error', { code: 'NO_FUNCTION', message: status.error });
-				return;
-			}
-
-			// The data of the message is the argument of the Python function
-			fusion.python(config.fn, $.data, { timeout: config.timeout > 0 ? config.timeout : 0 }).then(function(result) {
-				status.calls++;
-				status.error = '';
-				instance.status(status);
-				$.send('output', result);
-			}, function(err) {
-				status.errors++;
-				status.error = err.code + ': ' + err.message.split('\n')[0];
-				instance.status(status);
-				$.send('error', { code: err.code, message: err.message.split('\n')[0] });
-			});
-		};
-	};
+	// The logic is in total5/flow.js: it uses the same pool of workers as the rest of the application
+	exports.make = require('totalfusion').flow('call', 'python');
 
 </script>
 
 <readme>
-Calls a Python function of TotalFusion with the data of the message and sends the result to the first output. A failure goes to the second output with a `code` and a `message`.
+Calls a function of a Python component of TotalFusion with the data of the message and sends the result to the first output. A failure goes to the second output with a `code` and a `message` (the first line of the error, without the traceback: do not connect that output straight to a public response).
 </readme>
 
 <settings>
 	<div class="padding">
 		<ui-component name="input" path="?.fn" config="monospace:1;required:1" class="m">Function (module.function)</ui-component>
 		<ui-component name="input" path="?.timeout" config="type:number;monospace:1" class="m">Timeout (ms, 0 = none)</ui-component>
+		<ui-component name="input" path="?.idempotent" config="type:checkbox" class="m">Repeat the call on another worker if its worker dies (only for a function that can be repeated with no harm)</ui-component>
 	</div>
 </settings>
 

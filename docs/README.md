@@ -23,7 +23,8 @@ TotalFusion extends Total.js with other runtimes. These pages explain how to use
 
 | | |
 |---|---|
-| [Total.js 5](total5.md) | Actions, validation, permissions, API routes, MCP tools, Server-Sent Events and FlowStream. |
+| [Total.js 5](total5.md) | Actions, validation, permissions, API routes, MCP tools and Server-Sent Events. |
+| [Flow](flow.md) | Seven components for Total.js Flow: call a function, stream chunks, watch the workers and read the stats. |
 | [Binary data](binary-data.md) | Buffers and typed arrays without base64. |
 | [Streaming](streaming.md) | Generators as async iterables, with backpressure and cancellation. |
 | [Working with the workers](workers.md) | Concurrency, recycling, the health check, events and retrying. |

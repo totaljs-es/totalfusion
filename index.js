@@ -41,6 +41,7 @@ class Fusion extends EventEmitter {
 		this.watch = this.watch.bind(this);
 		this.stream = this.stream.bind(this);
 		this.sse = this.sse.bind(this);
+		this.flow = this.flow.bind(this);
 		this.stats = this.stats.bind(this);
 		this.shutdown = this.shutdown.bind(this);
 
@@ -210,6 +211,12 @@ class Fusion extends EventEmitter {
 	//   await fusion.register({ python: { path: PATH.root('python') } });
 	register(options) {
 		return require('./total5').register(Object.assign({ fusion: this }, options));
+	}
+
+	// Total.js 5: the function `make` of a component of Flow (see total5/flow.js and docs/flow.md). Loaded only when used.
+	//   exports.make = require('totalfusion').flow('call', 'rust');
+	flow(kind, runtime) {
+		return require('./total5/flow').make(this, kind, runtime);
 	}
 
 	// Total.js 5: sends a stream to the browser as Server-Sent Events (see total5/index.js)

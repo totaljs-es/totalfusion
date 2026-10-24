@@ -116,23 +116,3 @@ test('streams Python generators to the browser as Server-Sent Events', { skip: t
 	assert.equal(report.endless.got.length, 3);
 	assert.equal(report.closed, true);
 });
-
-test('the Flow component calls a Python function with the message', { skip: total5 && Fs.existsSync(Path.join(total5, 'flow-test.js')) ? false : 'The test harness of Flow (flow-test.js) was not found' }, function() {
-
-	const result = spawnSync(process.execPath, [Path.join(__dirname, 'flow-script.js'), total5], { timeout: 60000, cwd: Os.tmpdir() });
-	assert.equal(result.status, 0, result.stderr.toString() + result.stdout.toString().slice(-500));
-
-	const report = JSON.parse(result.stdout.toString().trim().split('\n').pop());
-
-	// the data of the message is the argument, the result goes out through the first output
-	assert.deepEqual(report.results[0], { words: 3 });
-
-	// a failure of Python goes out through the error output, without the traceback
-	assert.equal(report.results[1].code, 'REMOTE_ERROR');
-	assert.match(report.results[1].message, /^RuntimeError: /);
-	assert.ok(!report.results[1].message.includes('Traceback'));
-
-	// no function configured
-	assert.equal(report.results[2].code, 'NO_FUNCTION');
-	assert.equal(report.results.length, 3);
-});

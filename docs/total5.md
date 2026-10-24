@@ -29,7 +29,7 @@ Every function decorated with `@action` becomes a `NEWACTION()` named `<module>/
 
 ## FlowStream
 
-[total5/flow/python.html](../total5/flow/python.html) is a FlowStream component that calls a Python function with the data of each message: the result goes out through the first output, and a failure through the second one as `{ code, message }` (the message of the Python exception, without the traceback; do not connect that output straight to a public response). Its settings are the function (`module.function`) and a timeout. It uses the same pool of workers as the rest of the application. It is a standard component file; how you add it to your flow depends on your project. It was run with the test harness of Total.js (`flow-test.js`), not inside the Flow designer.
+TotalFusion has seven components for **Flow**: one for each runtime (Python, Rust, Go and WebAssembly) that calls a function with the data of each message, a **Stream** whose chunks are messages, **Events** that sends the events of the workers, and **Stats**. They use the same pool of workers as the rest of the application, and they were run in the designer of Flow 11.1. How to install and use them is in [Flow](flow.md).
 
 ## Server-Sent Events
 
