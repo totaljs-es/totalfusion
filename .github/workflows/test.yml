@@ -46,7 +46,7 @@ jobs:
       - run: cargo test --manifest-path rust/Cargo.toml
 
       # The module of the Go workers. The tests below build the Go worker of the tests with the same toolchain.
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: stable
           cache: false
