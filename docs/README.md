@@ -31,6 +31,7 @@ TotalFusion extends Total.js with other runtimes. These pages explain how to use
 | [Working with the workers](workers.md) | Concurrency, recycling, the health check, events and retrying. |
 | [Errors and cancellation](errors.md) | The error codes and how a call is cancelled. |
 | [Development and diagnosis](development.md) | Reload when the code changes, and the `doctor`. |
+| [AI assistants](ai.md) | The files for models and agents, the schemas, and your functions as tools. |
 | [Security](security.md) | What it protects and what it does not. |
 | [Reference](reference.md) | Every option, method and command. |
 

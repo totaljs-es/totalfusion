@@ -1,0 +1,219 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://raw.githubusercontent.com/totaljs-es/totalfusion/main/schemas/configure.schema.json",
+	"title": "fusion.configure()",
+	"description": "The object that fusion.configure() takes: one entry for each runtime that the application uses. Documented in docs/reference.md.",
+	"type": "object",
+	"properties": {
+		"python": {
+			"description": "Python components: a folder of .py files with functions decorated with @action.",
+			"allOf": [
+				{
+					"$ref": "#/$defs/pool"
+				}
+			],
+			"properties": {
+				"path": {
+					"type": "string",
+					"description": "The directory with your components. ./python, if absent."
+				},
+				"python": {
+					"type": "string",
+					"description": "The command of the interpreter. It wins over venv."
+				},
+				"venv": {
+					"type": "string",
+					"description": "A virtual environment whose interpreter is used."
+				},
+				"preload": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "Modules to import, running their @startup, before a worker is ready."
+				},
+				"requirements": {
+					"type": "string",
+					"description": "The file that the doctor checks. requirements.txt, if absent."
+				}
+			},
+			"unevaluatedProperties": false
+		},
+		"rust": {
+			"$ref": "#/$defs/native"
+		},
+		"go": {
+			"$ref": "#/$defs/native"
+		},
+		"wasm": {
+			"description": "A WebAssembly module that runs in a sandbox. A runtime has one module: use one Fusion for each module.",
+			"allOf": [
+				{
+					"$ref": "#/$defs/pool"
+				}
+			],
+			"properties": {
+				"module": {
+					"type": "string",
+					"description": "The path of the .wasm file."
+				},
+				"cwd": {
+					"type": "string",
+					"description": "Working directory of the worker. The folder of the module, if absent."
+				}
+			},
+			"required": [
+				"module"
+			],
+			"unevaluatedProperties": false
+		}
+	},
+	"additionalProperties": false,
+	"$defs": {
+		"pool": {
+			"type": "object",
+			"description": "The options that configure the pool of workers of a runtime: the same for every language.",
+			"properties": {
+				"workers": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Processes in the pool. They start on demand.",
+					"default": 1
+				},
+				"concurrency": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Calls that a worker runs at the same time. A WebAssembly module runs one at a time whatever this says.",
+					"default": 1
+				},
+				"timeout": {
+					"type": "integer",
+					"minimum": 0,
+					"description": "Milliseconds per call (in a stream, the longest time without progress). 0 disables it.",
+					"default": 30000
+				},
+				"maxQueue": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Calls that wait for a worker before the error QUEUE_FULL.",
+					"default": 1000
+				},
+				"startTimeout": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Milliseconds that a worker has to become ready. Raise it for big models.",
+					"default": 30000
+				},
+				"cancelGrace": {
+					"type": "integer",
+					"minimum": 0,
+					"description": "Milliseconds that a worker has to cancel a call before it is killed.",
+					"default": 2000
+				},
+				"maxCalls": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Replace a worker after this many calls. Never, if absent."
+				},
+				"maxMemory": {
+					"description": "Replace a worker that uses more memory than this: a number of bytes, or a text such as \"512mb\" or \"1.5gb\". No limit, if absent.",
+					"oneOf": [
+						{
+							"type": "integer",
+							"minimum": 1
+						},
+						{
+							"type": "string",
+							"pattern": "^\\s*\\d+(\\.\\d+)?\\s*(b|kb|mb|gb)?\\s*$"
+						}
+					]
+				},
+				"healthInterval": {
+					"type": "integer",
+					"minimum": 0,
+					"description": "Ping the idle workers every this many milliseconds. 0 disables the health check.",
+					"default": 10000
+				},
+				"healthTimeout": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Milliseconds that a worker has to answer a ping.",
+					"default": 10000
+				},
+				"forwardStderr": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show what the workers write to their error output."
+				},
+				"env": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					},
+					"description": "The environment of the workers. The process environment, if absent. A WebAssembly module never sees it."
+				}
+			}
+		},
+		"native": {
+			"description": "A worker that is a binary that you built (Rust or Go).",
+			"allOf": [
+				{
+					"$ref": "#/$defs/pool"
+				}
+			],
+			"properties": {
+				"binary": {
+					"type": "string",
+					"description": "The path of the worker you built."
+				},
+				"args": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "Arguments for the worker."
+				},
+				"cwd": {
+					"type": "string",
+					"description": "Working directory of the worker. The folder of the binary, if absent."
+				},
+				"shadowCopy": {
+					"type": "boolean",
+					"description": "Run the worker from a copy, so that the build can replace the file while it runs. True on Windows by default."
+				}
+			},
+			"required": [
+				"binary"
+			],
+			"unevaluatedProperties": false
+		},
+		"callOptions": {
+			"description": "The options of a single call: fusion.python(fn, args, options), fusion.call(runtime, fn, args, options) and fusion.stream(...). A signal (an AbortSignal) can also be given; it is not JSON.",
+			"type": "object",
+			"properties": {
+				"timeout": {
+					"type": "integer",
+					"minimum": 0,
+					"description": "Milliseconds for this call. In a stream, the longest time without progress. 0 disables it."
+				},
+				"idempotent": {
+					"type": "boolean",
+					"description": "The call can be repeated on another worker if its worker dies."
+				},
+				"retries": {
+					"type": "integer",
+					"minimum": 0,
+					"description": "How many times a call that is idempotent is repeated.",
+					"default": 1
+				},
+				"highWaterMark": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "In a stream, how many chunks the worker may run ahead of the consumer.",
+					"default": 16
+				}
+			},
+			"additionalProperties": false
+		}
+	}
+}

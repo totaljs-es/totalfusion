@@ -1,0 +1,48 @@
+# TotalFusion
+
+> TotalFusion extends Total.js 5 with other runtimes: functions written in Python, Rust, Go and WebAssembly are called from Node.js and Total.js as `async` functions, and become actions, API routes, MCP tools for AI agents, Server-Sent Events and nodes of Flow. Each runtime is a pool of worker processes that Node.js supervises; a crash in a worker never takes the application down. A WebAssembly module runs in a sandbox: no files, no network, no environment.
+
+Node.js 20 or newer, no dependencies, plain JavaScript (no TypeScript). Version 0.1.0, not on npm yet: install it from a clone with `npm install ../totalfusion`. The engine (`require('totalfusion')`) does not depend on Total.js; `fusion.register()`, `fusion.sse()` and `fusion.flow()` do. Nothing is downloaded, compiled or installed for the user. MIT license.
+
+## Start here
+
+- [README](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/README.md): What it is, what you get, install and status
+- [AGENTS.md](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/AGENTS.md): For an agent: how to use TotalFusion in an application and how to work on the repository
+- [Using TotalFusion with AI assistants](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/ai.md): The files for models, the schemas, and your functions as tools for agents
+- [Getting started](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/getting-started.md): Install it, call a first function, make it an action
+- [Use cases](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/use-cases.md): What it is good for, with the numbers that were measured
+## Runtimes
+
+- [Python](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/python.md): Components, the @action contract, libraries, virtual environments
+- [Rust](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/rust.md): A worker with the totalfusion crate
+- [The Rust crate](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/rust/README.md): The whole API of the crate
+- [Go](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/go.md): A worker with the totalfusion module
+- [The Go module](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/go/README.md): The whole API of the module, and WebAssembly from Go
+- [WebAssembly](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/webassembly.md): Modules in a sandbox, and the ABI for other languages
+## Total.js
+
+- [Total.js 5](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/total5.md): Actions, validation, permissions, API routes, MCP tools, Server-Sent Events
+- [Flow](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/flow.md): Seven components for Total.js Flow
+## Features
+
+- [Binary data](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/binary-data.md): Buffers and typed arrays without base64
+- [Streaming](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/streaming.md): Generators as async iterables, backpressure, cancellation
+- [Working with the workers](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/workers.md): Concurrency, recycling, health check, events, retrying
+- [Errors and cancellation](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/errors.md): Every error code
+- [Development and diagnosis](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/development.md): Reload on change, and the doctor
+- [Security](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/security.md): What it protects and what it does not
+## Reference
+
+- [Reference](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/reference.md): Every option, method and command
+- [How it works](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/how-it-works.md): The pool, the workers and the protocol
+- [Schema of the configuration](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/schemas/configure.schema.json): JSON Schema of fusion.configure() and of the options of a call
+- [Schema of a contract](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/schemas/contract.schema.json): JSON Schema of the contract of a function and of what --describe prints
+## Tutorials
+
+- [Tutorials](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/tutorials/README.md): The list, with what each one needs
+- [A Python function as an API and as a tool for an AI agent](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/tutorials/01-python-action-and-mcp.md): Contract, validation, MCP, live reload
+- [The code of third parties in the sandbox of WebAssembly](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/tutorials/02-wasm-sandbox.md): One module for each customer, a hostile module, a timeout
+## Optional
+
+- [Changelog](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/CHANGELOG.md): What each version contains
+- [Contributing](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/CONTRIBUTING.md): Tests and how the project is organised

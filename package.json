@@ -58,6 +58,9 @@
 		"wasm/host.js",
 		"!go/*_test.go",
 		"CHANGELOG.md",
+		"AGENTS.md",
+		"llms.txt",
+		"schemas",
 		"!**/__pycache__",
 		"!**/*.pyc"
 	],

@@ -1,5 +1,7 @@
 # Contributing
 
+The conventions and the lessons of the project, written for AI coding agents and useful to anyone, are in [AGENTS.md](AGENTS.md).
+
 ## Running the tests
 
 ```bash

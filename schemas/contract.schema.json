@@ -1,0 +1,172 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://raw.githubusercontent.com/totaljs-es/totalfusion/main/schemas/contract.schema.json",
+	"title": "The contract of a function",
+	"description": "The contract that a function declares, and the description of a worker that carries them (docs/total5.md, docs/how-it-works.md).",
+	"$defs": {
+		"contract": {
+			"type": "object",
+			"description": "What a function declares about itself. The names are the same in every language: @action(...) in Python, .summary().input() in Rust, .Summary().Input() in Go.",
+			"properties": {
+				"summary": {
+					"type": "string",
+					"description": "One line for people and for the AI agent that reads the tool."
+				},
+				"input": {
+					"type": "string",
+					"description": "The schema of the input in the syntax of Total.js: \"*text:String // The text\". * means required. Total.js validates it before the function runs."
+				},
+				"output": {
+					"type": "string",
+					"description": "The schema of what the function returns."
+				},
+				"query": {
+					"type": "string",
+					"description": "The schema of the query string. With query or params declared, the function receives { input, query, params }."
+				},
+				"params": {
+					"type": "string",
+					"description": "The schema of the parameters of the route."
+				},
+				"mcp": {
+					"type": "boolean",
+					"description": "Offer the function to AI agents as an MCP tool. Off unless true."
+				},
+				"permissions": {
+					"type": "string",
+					"description": "Who may call: \"admin,editor\", any of them."
+				},
+				"user": {
+					"type": "boolean",
+					"description": "True: only a logged in user. False: only an anonymous one."
+				},
+				"sa": {
+					"type": "boolean",
+					"description": "Only a super administrator."
+				},
+				"su": {
+					"type": "boolean",
+					"description": "Only a super user."
+				},
+				"idempotent": {
+					"type": "boolean",
+					"description": "The call can be repeated on another worker if its worker dies."
+				},
+				"timeout": {
+					"type": "integer",
+					"minimum": 0,
+					"description": "Longest time of a call, in milliseconds."
+				},
+				"id": {
+					"type": "string",
+					"description": "The name of the action in Total.js, if it should not be module/function."
+				}
+			},
+			"additionalProperties": false
+		},
+		"describe": {
+			"description": "What a worker prints with --describe and what fusion.describe(runtime) resolves: the contracts, read without running any function.",
+			"type": "object",
+			"properties": {
+				"actions": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"fn": {
+								"type": "string",
+								"description": "The name to call: module.function."
+							},
+							"module": {
+								"type": "string"
+							},
+							"name": {
+								"type": "string"
+							},
+							"async": {
+								"type": "boolean"
+							},
+							"stream": {
+								"type": "boolean",
+								"description": "True for a generator (Python) or a stream function (Rust, Go): it is read with fusion.stream() and is not an action."
+							},
+							"doc": {
+								"type": [
+									"string",
+									"null"
+								]
+							},
+							"meta": {
+								"$ref": "#/$defs/contract"
+							}
+						},
+						"required": [
+							"fn",
+							"module",
+							"name",
+							"stream",
+							"meta"
+						]
+					}
+				},
+				"functions": {
+					"type": "integer",
+					"description": "How many functions the worker has, with or without a contract."
+				},
+				"startups": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "Modules with @startup (Python)."
+				},
+				"errors": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"module": {
+								"type": "string"
+							},
+							"function": {
+								"type": "string"
+							},
+							"message": {
+								"type": "string"
+							}
+						}
+					},
+					"description": "Problems that were found: a syntax error, a function registered twice."
+				},
+				"runtime": {
+					"enum": [
+						"python",
+						"rust",
+						"go",
+						"wasm"
+					]
+				},
+				"protocol": {
+					"const": 2,
+					"description": "The version of the protocol (docs/how-it-works.md)."
+				},
+				"sdk": {
+					"type": "string",
+					"description": "The version of the SDK that built the worker."
+				}
+			},
+			"required": [
+				"actions",
+				"errors"
+			]
+		}
+	},
+	"oneOf": [
+		{
+			"$ref": "#/$defs/contract"
+		},
+		{
+			"$ref": "#/$defs/describe"
+		}
+	]
+}

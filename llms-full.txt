@@ -1,0 +1,2711 @@
+# TotalFusion: the documentation in one file
+
+> TotalFusion extends Total.js 5 with other runtimes: functions written in Python, Rust, Go and WebAssembly are called from Node.js and Total.js as `async` functions, and become actions, API routes, MCP tools for AI agents, Server-Sent Events and nodes of Flow. Each runtime is a pool of worker processes that Node.js supervises; a crash in a worker never takes the application down. A WebAssembly module runs in a sandbox: no files, no network, no environment.
+
+Node.js 20 or newer, no dependencies, plain JavaScript (no TypeScript). Version 0.1.0, not on npm yet: install it from a clone with `npm install ../totalfusion`. The engine (`require('totalfusion')`) does not depend on Total.js; `fusion.register()`, `fusion.sse()` and `fusion.flow()` do. Nothing is downloaded, compiled or installed for the user. MIT license.
+
+---
+
+<!-- README: README.md -->
+
+# TotalFusion
+
+<p align="center">
+  <a href="docs/python.md"><img src="docs/assets/python.svg" alt="Python" height="56"></a>&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="docs/rust.md"><img src="docs/assets/rust.svg" alt="Rust" height="56"></a>&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="docs/go.md"><img src="docs/assets/go.svg" alt="Go" height="56"></a>&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="docs/webassembly.md"><img src="docs/assets/webassembly.svg" alt="WebAssembly" height="56"></a>
+</p>
+
+<p align="center"><sub>Python, Rust, Go and WebAssembly &middot; for Total.js and Node.js</sub></p>
+
+**Extends Total.js with other runtimes.** Call functions written in Python, Rust and Go from Total.js and Node.js as plain `async` functions, and use them as Actions, API endpoints and MCP tools for AI agents, without leaving JavaScript. WebAssembly modules run in a sandbox.
+
+```python
+# python/sentiment.py
+from totalfusion import action
+
+@action(summary='Detects the sentiment of a text', input='*text:String', output='label:String', mcp=True)
+def analyze(data):
+    return { 'label': 'POSITIVE' if 'love' in data['text'] else 'NEGATIVE' }
+```
+
+```js
+// Total.js application
+const fusion = REQUIRE('totalfusion');
+
+fusion.register({ python: { path: PATH.root('python') } });
+
+// 'sentiment/analyze' is now a Total.js action: ACTION(), API routes and an MCP tool for AI agents
+const result = await ACTION('sentiment/analyze', { text: 'I love it' }).promise();
+```
+
+Total.js validates the input against the contract before Python runs. The engine (`require('totalfusion')`) is plain Node.js and does not depend on Total.js, so `fusion.python('sentiment.analyze', data)` also works in any Node.js program.
+
+## What you get
+
+- **Python, Rust and Go workers** that Node.js supervises: a pool of long-lived processes, correlated calls, timeouts, cancellation and real errors (with the traceback in Python). A crash in a worker never takes your application down. → [Python](docs/python.md), [Rust](docs/rust.md), [Go](docs/go.md)
+- **A sandbox**: a WebAssembly module runs without files, network or environment, in one file that works on any system. → [WebAssembly](docs/webassembly.md)
+- **Total.js integration**: the functions that declare a contract become actions with validated `input`, `query` and `params`, permissions, API routes, MCP tools, and Server-Sent Events. → [Total.js 5](docs/total5.md)
+- **Seven components for Flow**: call a function of any runtime from a node, stream chunks as messages, send the events of the workers to an alert and read the stats. They were run in the designer of Flow. → [Flow](docs/flow.md)
+- **Binary data without base64**: `Buffer` and typed arrays travel as raw bytes in both directions, NumPy arrays included. A 100 MB buffer makes the round trip in 43 ms. → [Binary data](docs/binary-data.md)
+- **Streaming** with backpressure and cancellation: a generator in Python or a stream function in Rust or Go is an async iterable. → [Streaming](docs/streaming.md)
+- **Several calls at once** in one worker, for calls that wait, and for the threads of a Rust worker or the goroutines of a Go one. → [Working with the workers](docs/workers.md)
+- **Workers that stay healthy**: replaced after a number of calls or when they use too much memory, with no call lost, and checked while idle. Events for your logs. Optional retry of calls that you declare idempotent. → [Working with the workers](docs/workers.md)
+- **Development reload**: save a file and the next call runs the new code. → [Development](docs/development.md)
+- **A `doctor`** that tells you what is missing, and the exact command to fix it, before anything runs. → [Development](docs/development.md#checking-your-setup)
+
+## Runtimes
+
+| | | |
+|---|---|---|
+| [Python](docs/python.md) | Available | Machine learning, scientific computing, any Python library. Python 3.9 or newer. |
+| [Rust](docs/rust.md) | Available | Speed, many threads, a small footprint. You build a binary; running it does not need Rust. |
+| [WebAssembly](docs/webassembly.md) | Available | Code in a sandbox, in one `.wasm` file for every system. Go is the language with an SDK today. |
+| [Go](docs/go.md) | Available | Network and infrastructure code, many calls at once, one binary that you can build for any system. You build a binary; running it does not need Go. |
+
+## Why not just `child_process`?
+
+A process per call costs about 17.6 ms to start. A worker that is already running answers a small call in 0.07 ms (Python) or 0.03 ms (Rust and Go), and keeps your model in memory. Beyond speed you get what you would otherwise write yourself: a pool, a bounded queue, timeouts, cancellation, restart of workers that die, memory limits, streaming, binary transfer and the contracts that make a function an action. [Use cases](docs/use-cases.md) has the cases with their numbers, and [Where it does not fit](docs/use-cases.md#where-it-does-not-fit) says when not to use it.
+
+## Install
+
+TotalFusion is **not on npm yet**. From a clone of the repository:
+
+```bash
+npm install ../totalfusion
+```
+
+Once published it will be `npm install totalfusion`. It needs Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. Rust and Go are needed only to build a worker in that language. **TotalFusion never installs, downloads or compiles anything for you.** → [Getting started](docs/getting-started.md)
+
+## Documentation
+
+| | |
+|---|---|
+| [Getting started](docs/getting-started.md) | Install it, call your first function, make it an action. |
+| [Tutorials](docs/tutorials/README.md) | Step by step, each with an application that is tested on every change. |
+| [Use cases](docs/use-cases.md) | What it is good for, with the numbers that were measured. |
+| [Python](docs/python.md) · [Rust](docs/rust.md) · [Go](docs/go.md) | One page per runtime. |
+| [Total.js 5](docs/total5.md) · [Flow](docs/flow.md) | Actions, validation, permissions, MCP, SSE. The components for Flow. |
+| [Binary data](docs/binary-data.md) · [Streaming](docs/streaming.md) | The two big features of the transfer. |
+| [Working with the workers](docs/workers.md) | Concurrency, recycling, health check, events, retrying. |
+| [Errors and cancellation](docs/errors.md) | The error codes. |
+| [Development and diagnosis](docs/development.md) | Reload on change and the `doctor`. |
+| [AI assistants](docs/ai.md) | `AGENTS.md`, `llms.txt`, the schemas and your functions as tools for agents. |
+| [How it works](docs/how-it-works.md) | The pool, the workers and the protocol. |
+| [Security](docs/security.md) | What it protects and what it does not. |
+| [Reference](docs/reference.md) | Every option, method and command. |
+
+The index of the documentation is [docs/README.md](docs/README.md).
+
+## Examples
+
+All of them run from a clone of the repository:
+
+| | |
+|---|---|
+| [examples/totaljs-app](examples/totaljs-app) | A Total.js 5 application with Python: actions, an API route, Server-Sent Events and reload on edit. `npm install && npm start`. |
+| [examples/totaljs-numerics](examples/totaljs-numerics) | Total.js 5 with NumPy statistics, a Rust Action and binary typed arrays. |
+| [examples/basic.js](examples/basic.js) | `fusion.python()` in any Node.js program. |
+| [examples/streaming.js](examples/streaming.js) | A Python generator as an async iterable, and cancelling it. |
+| [examples/rust.js](examples/rust.js) | The Rust worker of [examples/rust](examples/rust) (build it first with `cargo build --release`). |
+| [examples/go.js](examples/go.js) | The Go worker of [examples/go](examples/go) (build it first with `go build -o worker`). |
+| [examples/wasm.js](examples/wasm.js) | The WebAssembly module of [examples/wasm](examples/wasm) (build it first, see the file). |
+| [examples/components](examples/components) | Components that use scikit-learn, NumPy and PyTorch (they need those libraries in your Python). |
+
+## Status
+
+Version 0.1.0, not published. The whole test suite (more than 410 tests: Python, Rust, Go, WebAssembly and the components for Flow) **passes in GitHub Actions on Linux, macOS and Windows**, and it was run locally on macOS as well:
+
+| | Where it has run |
+|---|---|
+| Linux | GitHub Actions on Ubuntu: Node.js 20, 22 and 24 with Python 3.9 to 3.14 |
+| macOS | GitHub Actions (Node.js 24, Python 3.12) and locally on Apple silicon (Node.js 20, 22 and 24, Python 3.9 to 3.15) |
+| Windows | GitHub Actions (Node.js 24, Python 3.12): the whole suite, including the binary pipes, the memory of a worker and the Rust, Go and WebAssembly workers |
+| Rust | The stable toolchain of the runners, and 1.99 locally (the `totalfusion` crate and its worker) |
+| Go | The stable toolchain of the runners on the three systems, and locally with Go 1.21 and 1.27 (the module with the race detector, and the 62 tests of its worker) |
+| WebAssembly | GitHub Actions on the three systems (Node.js 20, 22 and 24 on Linux), and locally with Node.js 26: the 50 tests of the module, including a module that tries to get out |
+| Flow | The test harness of Total.js on the three systems, and by hand in the designer of Flow 11.1 on macOS |
+| Total.js | `total5` from npm in GitHub Actions, and also the 0.0.20 development version locally |
+
+Python 3.15 and the combinations that are not in the matrix of [.github/workflows/test.yml](.github/workflows/test.yml) were run only locally.
+
+Not verified: connecting a specific AI client to the MCP endpoint, and the components for Flow in the cloud service of Total.js.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the tests and how the project is organised, and [CHANGELOG.md](CHANGELOG.md) for what each version contains. **AI coding agents:** [AGENTS.md](AGENTS.md) says how to use TotalFusion in an application and how to work on this repository; it is also in the package.
+
+## Credits
+
+The logos of Python, Rust, Go and WebAssembly in the header come from [Simple Icons](https://simpleicons.org) (version 16.35.0, CC0) and only identify the languages and the technology. Python is a trademark of the Python Software Foundation, Rust of the Rust Foundation and Go of Google, and WebAssembly is a standard of the W3C. TotalFusion is not affiliated with or endorsed by any of them. The files are in [docs/assets](docs/assets) and can be replaced by other versions of the logos.
+
+## License
+
+MIT
+
+---
+
+<!-- AGENTS.md: AGENTS.md -->
+
+# AGENTS.md
+
+Guidance for AI coding agents. The first part is for an agent that **uses** TotalFusion in an application; the second is for one that **works on** this repository.
+
+## Project
+
+TotalFusion extends Total.js 5 with other runtimes: functions written in **Python, Rust, Go and WebAssembly** are called from Node.js as `async` functions, and become Total.js actions, API routes, MCP tools, Server-Sent Events and nodes of Flow. Each runtime is a pool of worker processes that Node.js supervises; a crash in a worker never takes the application down. The engine (`require('totalfusion')`) does not depend on Total.js; `fusion.register()`, `fusion.sse()` and `fusion.flow()` do.
+
+Package name: `totalfusion` (version 0.1.0, not on npm yet)
+Node.js: 20 or newer. No dependencies. Plain JavaScript, no TypeScript (Total.js does not support it: never add types or `.d.ts`).
+License: MIT
+
+## Using it
+
+Install from a clone while it is not on npm: `npm install ../totalfusion`. The documentation is in `docs/` (start with `docs/getting-started.md`, the tutorials in `docs/tutorials/`, the options in `docs/reference.md`).
+
+```js
+const fusion = require('totalfusion');   // in a Total.js definition: REQUIRE('totalfusion')
+
+fusion.configure({
+	python: { path: './python', workers: 2 },        // a folder of .py files
+	rust: { binary: './worker/target/release/worker' },
+	go: { binary: './worker/worker' },
+	wasm: { module: './module.wasm' }                // one module for each Fusion
+});
+
+await fusion.python('module.function', args);       // also fusion.rust(), fusion.go(), fusion.wasm()
+for await (const chunk of fusion.python.stream('module.generator', args)) { }
+```
+
+- **Total.js:** `await fusion.register({ python: { path: PATH.root('python') }, watch: DEBUG })` turns every function that declares a contract into an action (`module/function`). Then `ROUTE('API /api/ +module_function --> module/function')`. Do not `require('totalfusion/total5')`: Total.js does not accept that form; everything is on the main package.
+- **Contracts** are the schema syntax of Total.js: Python `@action(summary=..., input='*text:String', output=..., mcp=True)`; Rust `.summary().input().mcp(true)`; Go `.Summary().Input().MCP(true)`. A function without a contract is callable from JavaScript but is **not** an action. `*` means required.
+- **Errors:** `ValueError` (Python), `Error::invalid` (Rust) and `Invalid` (Go) are mistakes of the caller: Total.js sends their message to the client. Every other failure answers "The action failed" and the detail goes to the log.
+- **MCP:** only functions that say `mcp` become tools, and the endpoint (`$mcp : true` in `config`) has **no authentication** unless you add one. Never turn it on in an application that listens on a public address without authentication.
+- **A worker's standard output carries the protocol.** In Python, Rust and Go the SDK redirects `print` and `fmt.Println` to the error output, but write to the error output on purpose.
+- **WebAssembly** modules run in a sandbox (no files, no network, no environment) and are WASI reactors with a small ABI (`docs/webassembly.md`). A runtime has one module: use one `new Fusion({ wasm: ... })` for each module. The SDK is in Go (`app.Wasm()` in `init`, Go 1.24 or newer).
+- **A route with a dot in a segment** (`/x/discount.apply/`) looks like a file to Total.js and gets an empty reply: split the function name across segments.
+- **Nothing is downloaded, compiled or installed for you.** Workers are built by the user (`cargo build --release`, `go build`).
+- **Check the setup first:** `npx totalfusion doctor --path ./python` (also `--runtime rust|go|wasm` with `--binary` or `--module`). It reads the code without running it and says what to fix; with `--json` it prints `{ ok, checks: [{ status, name, message, fix }] }` and the exit code is `0`, `1` (something to fix) or `2` (wrong usage). Run the command of `fix` instead of guessing.
+- **Flow:** seven components (Python, Rust, Go, WebAssembly, Stream, Events, Stats) in `total5/flow/`, listed in `total5/flow/db.json`; see `docs/flow.md`.
+- **More for models:** `llms.txt` (an index of the documentation), `llms-full.txt` (all of it in one file), `schemas/configure.schema.json` (the options of `fusion.configure()` and of a call) and `schemas/contract.schema.json` (a contract and what `--describe` prints). `docs/ai.md` explains them.
+
+## Repository layout
+
+- `index.js` is the `Fusion` class and the entry point. `lib/` is the engine: `pool.js` (workers, queue, timeouts, recycling, health check, retries), `protocol.js` (frames), `stream.js`, `watch.js`, `doctor.js`, `options.js`, `errors.js`.
+- `python/`, `rust/`, `go/`, `wasm/` are the runtimes: each has an adapter (`index.js`) and its worker or SDK (`worker.py` and `sdk/`; the `totalfusion` crate in `rust/src`; the Go module in `go/*.go`; `wasm/host.js`).
+- `total5/` is the Total.js integration: `index.js` (`register`, `sse`), `flow.js` and `flow/*.html` (the components of Flow).
+- `bin/totalfusion.js` is the `doctor` command. `scripts/flow-db.js` builds `total5/flow/db.json`; `scripts/llms.js` builds `llms.txt` and `llms-full.txt`.
+- For agents: this file, `CLAUDE.md` and `GEMINI.md` (they import it), `.github/copilot-instructions.md`, `.claude/skills/` (three checklists: add a function, diagnose a worker, add a tutorial), `schemas/` and `llms.txt`.
+- `tests/` has the tests and the workers they run (`tests/go`, `tests/rust`, `tests/wasm`, `tests/components`). `examples/` has the examples and the applications of the tutorials (`examples/tutorials`). `docs/` is the documentation, and it is tested.
+- `.github/workflows/test.yml` runs the suite on Linux (Node.js 20, 22, 24), macOS and Windows.
+
+## Commands
+
+```bash
+npm test                                  # the whole suite (node --test)
+node --test tests/go.test.js              # one file
+npm run test:rust                         # cargo test of the crate
+npm run test:go                           # go test of the module
+node scripts/flow-db.js --write           # after changing a component of Flow
+node scripts/llms.js --write              # after adding or changing a page of the documentation
+npx totalfusion doctor --path tests/components
+npm pack --dry-run                        # what goes into the package
+```
+
+`npm test` needs Python 3.9 or newer. The tests of Rust run if `cargo` is found, the ones of Go if `go` is found (`GO=/path/to/go`), the ones of WebAssembly and the tutorial 2 if that Go is 1.24 or newer, and the ones of Total.js and Flow if Total.js 5 is found (`TOTAL5_PATH`, the `total5` package or a sibling `../framework5`). Without them those tests are skipped, not failed. See `CONTRIBUTING.md`.
+
+## Conventions
+
+- Plain JavaScript in the style of Total.js: tabs, `'use strict'`, no dependencies. Rust follows `rustfmt`, Go follows `gofmt`.
+- The protocol is version 2 (`lib/protocol.js`): the Python worker, the Rust crate, the Go module and the host of WebAssembly all speak it. A change in one is a change in all.
+- A change comes with tests, and a test must be able to fail: **break the code on purpose and see the test fail** before you trust it.
+- The documentation is part of the product and is tested (`tests/docs.test.js`: links, anchors, titles, reachability). A new page goes in `docs/README.md` and in `PAGES` of `scripts/llms.js`; `tests/agents.test.js` fails if it is missing. Say what was measured and where, what was verified and what was not. Do not write numbers from memory: run it.
+- A tutorial is a page in `docs/tutorials` and an application in `examples/tutorials` with the same name and a `verify.js`; `tests/tutorials.test.js` runs it. Write the outputs of the page from what the application printed.
+- Every replacement that a script does must assert that its pattern matched: a silent no-op looks like success.
+
+## Pitfalls
+
+- **Windows:** an executable that is running cannot be replaced (the Rust and Go workers run from a copy: `shadowCopy`). In Go, never make a second `os.File` for a handle that another `os.File` owns: the finalizer of the first closes it at the first garbage collection (`go/stdout_windows.go`). Checkouts have CRLF line endings: split text with `/\r?\n/`.
+- **Python:** run the tests with `PYTHONDONTWRITEBYTECODE` unset (`env -u PYTHONDONTWRITEBYTECODE npm test`); the components are loaded from source, never from bytecode (`stale.test.js`).
+- **Make failures loud.** A worker that exits silently hides its cause: print the reason to the error output and exit non-zero.
+- **Processes:** a script that waits for workers or watchers needs its own keep-alive timer, because idle workers are `unref`'d. Tests that start an application must spawn it with an IPC channel (`stdio: [..., 'ipc']`), or Total.js starts its debug watcher and the process cannot be stopped cleanly.
+- **Flow:** the icon font of Flow is not Tabler: use names from the icon list of Flow (public/icons-db.html in its repository) or nothing shows.
+- **Do not commit** built workers or modules (`target/`, `plugins/*.wasm`, `__pycache__`, `*.js.map`), and leave no files in the temporary directory after the tests.
+
+---
+
+<!-- Using TotalFusion with AI assistants: docs/ai.md -->
+
+# Using TotalFusion with AI assistants
+
+Two things are in this page: how to give an assistant (or an agent) what it needs to **write code that uses TotalFusion**, and how your functions become **tools that an agent can call**. Every file mentioned here is kept true by a test of the project (`tests/agents.test.js`).
+
+## What to give your assistant
+
+| File | What it is | Give it when |
+|---|---|---|
+| [AGENTS.md](../AGENTS.md) | Instructions: how to use TotalFusion in an application, how the repository is organised, the commands, and the pitfalls to avoid. It is also in the npm package, at `node_modules/totalfusion/AGENTS.md`. | The assistant works in your application or in this repository. |
+| [llms.txt](../llms.txt) | An index of the documentation, in the format of [llmstxt.org](https://llmstxt.org): one line and one link for each page. | The assistant can read links and you want it to choose what to read. |
+| [llms-full.txt](../llms-full.txt) | All the documentation in one file. | The assistant cannot read links, or you want it to have everything at once. |
+| [schemas/configure.schema.json](../schemas/configure.schema.json) | JSON Schema of `fusion.configure()` and of the options of a call. | To validate a configuration, or to let an editor complete it. |
+| [schemas/contract.schema.json](../schemas/contract.schema.json) | JSON Schema of the contract of a function and of what a worker prints with `--describe`. | To write a worker in another language, or to check one. |
+
+`llms.txt` and `llms-full.txt` are built from the pages of the repository (`node scripts/llms.js --write`), so they cannot be out of date: a test fails if they are.
+
+If your assistant takes a block of instructions of your own, this is enough to start (it is the essence of `AGENTS.md`):
+
+```
+This project uses TotalFusion (https://github.com/totaljs-es/totalfusion) to call functions written in
+Python, Rust, Go and WebAssembly from Total.js 5 and Node.js. Read node_modules/totalfusion/AGENTS.md first.
+- A function that declares a contract (@action in Python, .summary().input() in Rust, .Summary().Input() in Go)
+  becomes a Total.js action with fusion.register(); only functions that say mcp become tools for AI agents.
+- The standard output of a worker carries the protocol: write to the error output.
+- Check the setup with: npx totalfusion doctor --json
+- A WebAssembly module runs in a sandbox (no files, no network, no environment); one module for each Fusion.
+- The MCP endpoint has no authentication unless you add one: never expose it without.
+```
+
+## Your functions as tools for agents
+
+A function with a contract and `mcp=True` (Python), `.mcp(true)` (Rust) or `.MCP(true)` (Go) is offered by the MCP endpoint of Total.js as a tool: its name, its description, the schema of its arguments and the schema of its result come **from the contract**, so you write them once. The [first tutorial](tutorials/01-python-action-and-mcp.md) does it from the start and shows the real answers of `tools/list` and `tools/call`.
+
+Two things to decide before you do it for real: **which functions** the agent may call (an agent sees only what you say, so leave the rest without `mcp`), and **who may reach the endpoint** (it has no authentication unless you add one with `Total.mcp.auth`). See [Security](security.md).
+
+## Let an agent check the environment
+
+```bash
+npx totalfusion doctor --json
+```
+
+It prints one JSON object, and the exit code says the result: `0` when everything is in order, `1` when something has to be fixed, `2` for a wrong usage.
+
+```json
+{
+  "runtime": "python",
+  "ok": false,
+  "checks": [
+    { "status": "error", "name": "Libraries", "message": "numpy used by stats needs to be installed", "fix": "/project/.venv/bin/python -m pip install numpy" }
+  ],
+  "text": "TotalFusion doctor: python ..."
+}
+```
+
+Each check has a `status` (`ok`, `warn` or `error`), a `name`, a `message` and, when there is something to do, the exact command in `fix`. An agent can run the command of `fix` instead of guessing. The doctor reads the code without running it, so it is safe to call. See [Development and diagnosis](development.md).
+
+## For agents that work on the repository
+
+The repository has the files that the common agents look for. They all lead to the same instructions, so there is only one text to keep true:
+
+- `AGENTS.md`: the instructions.
+- `CLAUDE.md` and `GEMINI.md`: they import `AGENTS.md`.
+- `.github/copilot-instructions.md`: a short version for GitHub Copilot, with the rules that matter most.
+- `.claude/skills/`: three skills for Claude Code (add a function to an application, diagnose a worker that fails, add a tutorial). Each one is a checklist with the real commands.
+
+## What is verified
+
+`tests/agents.test.js` checks that the paths and the commands that `AGENTS.md` and the skills mention exist, that `llms.txt` lists every page and that its links lead to files that exist, that `llms-full.txt` is what the pages say, that the schemas have the same options as the code, and that the files for each agent lead to `AGENTS.md`. What is **not** verified is how a given assistant uses these files: that depends on the assistant.
+
+---
+
+<!-- Getting started: docs/getting-started.md -->
+
+# Getting started
+
+## 1. Install
+
+TotalFusion is **not on npm yet**. From a clone of the repository, install it by its path:
+
+```bash
+npm install ../totalfusion          # or "totalfusion": "file:../totalfusion" in your package.json
+```
+
+Once it is published it will be `npm install totalfusion`. You need Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. Rust and Go are needed only to **build** a worker in that language, never to run one.
+
+## 2. Your first function, in any Node.js program
+
+```python
+# python/hello.py
+def greet(data):
+    return {'message': 'Hello ' + data['name']}
+```
+
+```js
+// app.js
+const fusion = require('totalfusion');
+
+fusion.configure({ python: { path: './python' } });
+
+fusion.python('hello.greet', { name: 'world' }).then(result => {
+    console.log(result);            // { message: 'Hello world' }
+    return fusion.shutdown();
+});
+```
+
+A pool of Python processes starts on the first call and stays alive. [examples/basic.js](../examples/basic.js) is a version of this that you can run.
+
+## 3. In a Total.js 5 application
+
+Declare what the function takes and returns, and it becomes an **action** of Total.js:
+
+```python
+# python/hello.py
+from totalfusion import action
+
+@action(summary='Greets someone', input='*name:String', output='message:String')
+def greet(data):
+    return {'message': 'Hello ' + data['name']}
+```
+
+```js
+// definitions/fusion.js
+const fusion = REQUIRE('totalfusion');
+
+exports.install = function() {
+    fusion.register({ python: { path: PATH.root('python') }, watch: DEBUG });
+    ROUTE('API  /api/  +hello_greet  -->  hello/greet');
+};
+```
+
+Now `ACTION('hello/greet', { name: 'x' })` and `POST /api/` work, Total.js rejects an input without `name` before Python runs, and with `watch: DEBUG` the next request uses your edits. The whole application is in [examples/totaljs-app](../examples/totaljs-app). More in [Total.js 5](total5.md).
+
+## 4. Rust
+
+If a function is heavy on the CPU, write it in Rust, build a binary and call it the same way:
+
+```js
+fusion.configure({ rust: { binary: './worker/target/release/worker' } });
+await fusion.rust('collatz.longest', { limit: 3000000 });
+```
+
+See [Rust](rust.md) and [examples/rust.js](../examples/rust.js).
+
+## 5. Go
+
+If a function is network or infrastructure code, or you want one binary that you can build for any system, write it in Go and call it the same way:
+
+```js
+fusion.configure({ go: { binary: './worker/worker' } });
+await fusion.go('net.check', { host: 'example.com' });
+```
+
+See [Go](go.md) and [examples/go.js](../examples/go.js).
+
+## 6. Check your setup
+
+```bash
+npx totalfusion doctor --path ./python
+```
+
+It tells you which libraries are missing and the exact command to install them in the right Python. Nothing is imported, run or installed. See [Development and diagnosis](development.md).
+
+## Where to go next
+
+| If you want to... | Read |
+|---|---|
+| use machine learning or any Python library | [Python](python.md) |
+| run heavy work without blocking Node.js | [Rust](rust.md) or [Go](go.md) |
+| expose functions as actions, API routes, MCP tools | [Total.js 5](total5.md) |
+| send images, audio or arrays | [Binary data](binary-data.md) |
+| show a model's output as it is produced | [Streaming](streaming.md) |
+| call many slow things at the same time | [Working with the workers](workers.md#several-calls-at-the-same-time) |
+| see ideas with real numbers | [Use cases](use-cases.md) |
+| know what a setting does | [Reference](reference.md) |
+
+---
+
+<!-- Use cases: docs/use-cases.md -->
+
+# Use cases
+
+Each case says **what was run** and what was measured, so you can tell a result from an idea. All the numbers come from one machine (8 cores, macOS, Node.js 24), and they show orders of magnitude, not guarantees.
+
+## Machine-learning inference behind an API
+
+**Goal:** a model that lives in Python, served as an action of Total.js.
+
+**How:** load the model in `@startup`, declare the contract, `preload` it, and `warmup` at boot.
+
+```python
+@startup
+def load():
+    global pipe
+    pipe = pipeline('sentiment-analysis', model=MODEL)
+
+@action(summary='Detects the sentiment of a text', input='*text:String', output='label:String\nscore:Number', mcp=True)
+def analyze(data):
+    return pipe(data['text'])[0]
+```
+
+**Run and measured:** DistilBERT with PyTorch ([examples/components/sentiment.py](../examples/components/sentiment.py)). A call takes about 5 to 7 ms once the worker is warm; the first request after `warmup` through the MCP endpoint took about 22 ms; each worker uses 1.35 GB, so start with one or two. A scikit-learn forest ([classifier.py](../examples/components/classifier.py)) answered in 7 ms. See [Models and memory](python.md#models-and-memory).
+
+## Let AI agents call your functions
+
+**Goal:** an agent can use a function of yours as a tool, with the arguments checked.
+
+**How:** add `mcp=True` (`.mcp(true)` in Rust, `.MCP(true)` in Go) to the contract and enable the MCP endpoint of Total.js. The tool and its schema come from the contract.
+
+**Run:** the endpoint was called with `tools/list` and `tools/call`: only the functions that say `mcp` are listed, the schema has the `input`, `query` and `params` sections, an invalid argument is rejected by Total.js, and a function that does not say `mcp` answers "Unknown tool". Remember that the endpoint has no authentication unless you add it: see [Security](security.md).
+
+## Show a model's output as it is produced
+
+**Goal:** the user sees the text of a language model while it is generated, and the model stops if they leave.
+
+**How:** a Python generator (`yield` per token) and `fusion.sse($, stream)` in a route.
+
+```python
+def generate(data):
+    for token in model.generate(data['prompt']):
+        yield token
+```
+
+```js
+ROUTE('GET /generate/', $ => fusion.sse($, fusion.python.stream('llm.generate', { prompt: $.query.prompt })));
+```
+
+**Run and measured:** a real model (DistilGPT2, CPU, [generate.py](../examples/components/generate.py)) gave the first token after 61 ms and a new one every 7 ms, and cutting the stream after 5 tokens of a 500-token request stopped the generation in 43 ms. The Server-Sent Events route was run in a Total.js application with a Python generator (one event every 0.4 s, the generator is cancelled when the browser leaves). The two pieces were not chained in one test with the language model. See [Streaming](streaming.md).
+
+## Heavy CPU work without blocking Node.js
+
+**Goal:** a calculation that takes seconds must not freeze the application.
+
+**How:** write it in Rust or Go and call it with `fusion.rust(...)` or `fusion.go(...)`; let one process use all the cores with `concurrency`.
+
+**Measured:** the longest Collatz chain below 3 million, the same algorithm in each language. Optimized JavaScript takes 1.2 s and Rust 0.33 s (3.6 times faster; the naive JavaScript is 14 times slower than Rust), and pure Python is 48 times slower than Rust. Eight of those jobs take 9.1 s in JavaScript **blocking the event loop the whole time**, against 0.7 s on four Rust workers with 1 ms of delay in the event loop. The same test run again with a Go worker next to the Rust one, on the same day and machine (three alternating runs, and another implementation of the optimized JavaScript, 0.95 s): Go took 0.48 to 0.50 s and Rust 0.36 s, and eight jobs took 7.5 s in JavaScript against 1.0 to 1.1 s on four Go workers and 0.75 to 0.84 s on four Rust workers. See [Rust](rust.md), [Go](go.md) and the examples in [examples/rust](../examples/rust) and [examples/go](../examples/go).
+
+## Vector search and numerical work with NumPy
+
+**Goal:** use NumPy (or any numerical library) from Node.js without paying a process start per call.
+
+**Measured:** nearest neighbours over 50,000 vectors of 128 dimensions ([vectors.py](../examples/components/vectors.py)): the worker builds the index once (about 145 ms), then every call takes about 3 ms, against about 98 ms when a process is started per call. An array of 10 million `float32` (40 MB) makes the round trip in 18 ms as a `Float32Array`, with no base64 and no JSON. See [Binary data](binary-data.md).
+
+## Call slow things at the same time
+
+**Goal:** many calls that spend their time waiting (an API, a database) should not each need a process.
+
+**How:** `async def` functions in Python and `concurrency: N`.
+
+**Measured:** 64 calls that wait 0.2 s each take 3.23 s on 4 workers with one call at a time, and 0.21 s with `concurrency: 64` on a single worker that uses 24 MB instead of 94 MB. See [Several calls at the same time](workers.md#several-calls-at-the-same-time).
+
+## Send big files and arrays without base64
+
+**Goal:** images, audio or arrays go to a worker and come back, and the transfer does not dominate.
+
+**Measured:** a 1 MB buffer makes the round trip in 0.5 ms, 32 MB in 14 ms and 100 MB in 43 ms; as base64 inside JSON the same bytes take 4.4 ms and 145 ms for 1 MB and 32 MB, and 100 MB does not fit (it exceeds the JSON limit). A sketch of an image function (`Image.open(io.BytesIO(data['image']))` and back) is in [Binary data](binary-data.md); that sketch was not run, the transfer was.
+
+## Edit the code while the application runs
+
+**Goal:** see the effect of a change in the next call, with no restart.
+
+**Run:** in [examples/totaljs-app](../examples/totaljs-app), editing `python/words.py` while the application ran changed the answer of the next request (a count of 3 became 300), and no call was lost. In the tests, calls made while the workers were being replaced all succeeded. See [Development](development.md).
+
+## Several runtimes in the same application
+
+**Run:** both runtimes can be configured in the same `fusion` and called side by side, each with its own pool (`fusion.python(...)`, `fusion.rust(...)` and `fusion.go(...)`). A pipeline that chains them (for example a model in Python and a post-processing step in Rust) was **not** built as an example.
+
+## Where it does not fit
+
+- **Light work on small data.** JavaScript in the same process pays no transfer: it wins. A call to a worker costs 0.03 ms (Rust and Go) to 0.07 ms (Python) of overhead, which is nothing for real work and everything for adding two numbers.
+- **Code you do not trust.** A worker is not a sandbox: see [Security](security.md).
+- **Very many Node.js processes.** Every process has its own pool of workers, so with the cluster mode of Total.js the workers (and their models) multiply by the number of processes.
+
+---
+
+<!-- Python: docs/python.md -->
+
+# Python
+
+Write functions in Python and call them from Node.js and Total.js as `async` functions. Python is the right choice when you need its ecosystem: machine learning, scientific computing, data processing, any library that only exists for Python.
+
+## Quick start
+
+```python
+# python/analyzer.py
+from totalfusion import action
+
+@action(summary='Counts the words of a text', input='*text:String', output='words:Number', mcp=True)
+def analyze(data):
+    return {'words': len(data['text'].split())}
+```
+
+```js
+// any Node.js program
+const fusion = require('totalfusion');
+const result = await fusion.python('analyzer.analyze', { text: 'Hello world' });   // { words: 2 }
+```
+
+```js
+// a Total.js application: the function becomes the action 'analyzer/analyze'
+await REQUIRE('totalfusion').register({ python: { path: PATH.root('python') } });
+```
+
+## Requirements and the environment
+
+- **Python 3.9 or newer.** The test suite has been run on 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 and 3.15. The worker uses only the standard library.
+- **TotalFusion never installs anything.** You create the environment and install the libraries your components need.
+- **The interpreter** is chosen in this order: the `python` option, the `venv` option, the `TOTALFUSION_PYTHON` variable, then `python3` (`python` on Windows).
+- **Use a virtual environment.** The libraries you install are then yours alone:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install numpy scikit-learn
+```
+
+```js
+fusion.configure({ python: { path: './python', venv: './.venv' } });
+```
+
+- **Check it** before running anything with `npx totalfusion doctor --path ./python --venv ./.venv`: it tells you which libraries are missing and the exact command to install them in the right Python. See [Development and diagnosis](development.md#checking-your-setup).
+
+## Writing components
+
+A component is a Python module inside `path`. Every public function defined in it can be called from Node.js with one argument (any JSON value) and returns any JSON value. Functions can be `def` or `async def`.
+
+- Use `__all__` to expose an explicit list instead.
+- Names starting with `_` and names imported from other modules are not callable.
+- Modules outside `path` (standard library, site-packages) cannot be called. Import them from your own component instead.
+- `print()` and anything written to stdout goes to stderr, so it never breaks the protocol.
+- **Components are always loaded from their source.** Python trusts a `.pyc` when the modification time of the source (in whole seconds) and its size have not changed, so a file saved twice within a second without changing its size would keep running the old code, even in a new worker. TotalFusion never reads or writes bytecode for your components, which also means it never leaves a `__pycache__` next to your files. The libraries you import (NumPy, PyTorch, the standard library) keep their own bytecode.
+
+## Contracts and hooks
+
+```python
+from totalfusion import action, startup, shutdown
+
+model = None
+
+@startup
+def load():                       # once per worker, right after the module is imported
+    global model
+    model = load_my_model()
+
+@shutdown
+def unload():                     # when the worker stops gracefully (1.5 s at most)
+    model.close()
+
+@action(summary='Classifies a text', input='*text:String // Text to classify', output='label:String', mcp=True)
+def classify(data):
+    return { 'label': model.predict(data['text']) }
+```
+
+`@action` declares the contract: `summary`, `input`, `output`, `query`, `params` (Total.js schema syntax), `mcp`, `permissions`, `user`, `sa`, `su`, `idempotent`, `timeout` and `name`/`id`. Its arguments are read **statically** (they must be literals), so `fusion.describe('python')` lists every contract without importing your code and without loading any model.
+
+`@startup` and `@shutdown` can be `def` or `async def`. To load a model **before** the worker reports ready (so the first call is not slow), name the module in `preload`: `fusion.configure({ python: { preload: ['classifier'] } })`. A module that cannot be preloaded fails the start with the real traceback in `err.stderr`.
+
+## Models and memory
+
+Every worker is a separate process with **its own copy of the model**, so memory grows with `workers`. Measured on a MacBook (8 cores, Python 3.12, physical footprint from `footprint`, not `ps`, which under-reports compressed memory on macOS):
+
+| Model | Per worker | 1 worker | 2 workers | 4 workers |
+|---|---|---|---|---|
+| scikit-learn random forest ([classifier.py](../examples/components/classifier.py)) | 129 MB | 150 calls/s | - | 554 calls/s (516 MB) |
+| DistilBERT sentiment with PyTorch ([sentiment.py](../examples/components/sentiment.py)) | 1.35 GB | 186 calls/s | 274-309 calls/s (2.7 GB) | 334-366 calls/s (5.4 GB) |
+
+The DistilBERT call takes about 5-7 ms for a sentence and 25 ms for 1,900 characters. A worker is ready in about 2.5 s (PyTorch import plus the model, from a warm disk cache), against 2.7-3.3 s **per call** when a process is spawned each time.
+
+What to do with it:
+
+- **Small models:** one worker per core you want to use scales almost linearly.
+- **Large models:** start with `workers: 1` or `2`. PyTorch already uses several threads inside one process, so four workers gave +20% throughput over two for twice the memory. Setting `OMP_NUM_THREADS` through the `env` option did not change that noticeably.
+- **Use `preload`.** The `timeout` of a call starts when it is sent to a worker, so a model loaded lazily on the first call would count its loading time against that call. With `preload` the worker reports ready only after loading, and the load has its own limit (`startTimeout`, 30 s by default, raise it for big models).
+- **Use `warmup`.** Workers start with the first call. `await fusion.warmup('python')` (or `fusion.register({ warmup: true })`) starts them all at boot, so the first request does not wait for the model: the first request through MCP went from 2.4 s to about 22 ms (later ones take 9-12 ms), with the boot taking the 2.6 s instead.
+- **Keep input shapes fixed.** PyTorch on CPU prepares its kernels per tensor shape, and the first call with each new sequence length took 130-250 ms. Padding to a fixed length in `@startup` and in the function removed every slow call (40 different sentences, all between 7 and 9 ms). See [sentiment.py](../examples/components/sentiment.py).
+
+## How a call runs
+
+- A function receives **one argument**, any JSON value (usually a dict), and returns any JSON value. `def` and `async def` are both fine, and a function that yields is a [stream](streaming.md).
+- `async def` functions run in the event loop of the worker and overlap. `def` functions run in a pool of threads, as many as `concurrency` allows (at least 8).
+- With `concurrency: 1`, the default, a worker runs one call at a time and the work is spread over the processes. See [Several calls at the same time](workers.md#several-calls-at-the-same-time) for what changes when you raise it: calls that overlap in a worker **share the state of its modules**, and because of the GIL, computation in pure Python does not speed up with threads (use more workers for it).
+- A `def` function cannot be interrupted. After a timeout the caller is rejected at once, and if the function does not return within `cancelGrace` the worker is killed and replaced. An `async def` function is cancelled for real. See [Errors and cancellation](errors.md#cancellation).
+- **Components are loaded from their source every time.** Edit a file and the next worker runs the new code, even if you saved twice within a second.
+
+## What crosses the boundary
+
+| JavaScript | Python |
+|---|---|
+| object, array, string, number, boolean, `null` | `dict`, `list`, `str`, `int` or `float`, `bool`, `None` |
+| `Buffer`, `Uint8Array`, `ArrayBuffer` | `bytes` |
+| `Float32Array`, `Float64Array`, `Int32Array`... | `memoryview` of the matching type, without copying |
+
+From Python, `bytes`, `bytearray`, `memoryview`, `array.array` and anything with the buffer protocol (NumPy arrays included) go back as a `Buffer` or the matching typed array. Tuples go back as arrays. A value that is not JSON (a `set`, an object of your own) fails with `NOT_SERIALIZABLE`, and so do `NaN` and infinity. See [Binary data](binary-data.md) for the details and the numbers.
+
+## Options of the Python runtime
+
+`path`, `venv`, `python`, `preload` and `requirements` are specific to Python. `workers`, `concurrency`, `timeout`, `maxQueue`, `startTimeout`, `cancelGrace`, `maxCalls`, `maxMemory`, `healthInterval`, `healthTimeout`, `forwardStderr` and `env` are shared. All of them are in the [reference](reference.md#options).
+
+## When something goes wrong
+
+| What you see | Why, and what to do |
+|---|---|
+| `ModuleNotFoundError` | A library is not installed **in the Python that runs the workers**. `err.hint` has the command to install it there. |
+| `NOT_FOUND` for a function that exists | Only public functions defined in modules inside `path` can be called: names that start with `_`, names imported from other modules and modules outside `path` are not exposed. |
+| The first call is slow | The model loads when the worker starts. Use `preload` and `fusion.warmup('python')` so it loads at boot. |
+| `print()` shows up in the terminal of the application | What a worker writes to its standard output goes to the error output, so it never breaks the protocol. `forwardStderr: false` hides it. |
+| Memory grows over the days | Libraries for machine learning tend to leak: use `maxCalls` or `maxMemory` and the worker is replaced without losing a call. See [Keeping workers healthy](workers.md#keeping-workers-healthy). |
+| A call never returns | Set a `timeout`. A `def` function that cannot be cancelled costs its worker. |
+
+---
+
+<!-- Rust: docs/rust.md -->
+
+# Rust
+
+Write the functions in Rust, build a binary, and call it like the Python ones. A Rust worker is an **isolated process** that speaks the same protocol, so everything in this documentation applies to it as well: the pool, timeouts, cancellation, [binary data](binary-data.md), [streaming](streaming.md), [recycling and health checks](workers.md#keeping-workers-healthy), Total.js actions, MCP tools and the `doctor`.
+
+## Write a worker
+
+```rust
+// rust/src/main.rs
+use totalfusion::{object, App, Call, Error};
+
+fn main() {
+    App::new()
+        .function("collatz.longest", |call: &Call| {
+            let limit = call.args["limit"].as_i64().ok_or_else(|| Error::invalid("limit must be a number"))?;
+            Ok(object! { "number" => limit })   // the real work goes here
+        })
+        .summary("Finds the number with the longest Collatz chain")
+        .input("*limit:Number")
+        .mcp(true)
+        .run();
+}
+```
+
+## Build it and call it
+
+The crate is not on crates.io: the npm package ships its sources, so the `Cargo.toml` of your worker points to them:
+
+```toml
+[dependencies]
+totalfusion = { path = "../node_modules/totalfusion/rust" }
+```
+
+```bash
+cargo build --release
+```
+
+```js
+fusion.configure({ rust: { binary: './rust/target/release/worker', workers: 4 } });
+
+const result = await fusion.rust('collatz.longest', { limit: 3000000 });
+
+for await (const chunk of fusion.rust.stream('count.up', { n: 10 })) { /* a function registered with .stream() */ }
+
+// Total.js: the functions that declare their contract become actions
+await fusion.register({ runtime: 'rust', rust: { binary: './rust/target/release/worker' } });
+```
+
+The guide of the crate, with the whole API, is in [rust/README.md](../rust/README.md). A complete example is in [examples/rust](../examples/rust).
+
+## Good to know
+
+- **Nothing is compiled for you.** `binary` is the path of a worker you built (or got precompiled), so the people who only run the application do not need Rust. `fusion.doctor('rust')` and `npx totalfusion doctor --binary ./worker` check that the file exists, can be executed, answers, speaks the same protocol version and is not a debug build.
+- **A panic fails one call, not the worker.** A crash of the process is a `WORKER_CRASHED` error and the worker is replaced; Node.js never goes down.
+- **Same options as Python:** `workers`, `concurrency`, `timeout`, `maxQueue`, `maxCalls`, `maxMemory`, `healthInterval`, `cancelGrace`... plus `args`, `env` and `cwd` for the process. Every call of a worker runs in its own thread, so `concurrency` makes one process use all the cores (see [Several calls at the same time](workers.md#several-calls-at-the-same-time)).
+- **Contracts are declared in code**, with the same names as `@action` in Python (`summary`, `input`, `output`, `query`, `params`, `permissions`, `mcp`...). The binary prints them with `--describe`.
+- **Where Rust pays off.** Heavy CPU work that should not block Node.js and that can use several cores. For the longest Collatz chain below 3 million (the same algorithm in each language, eight cores): optimized JavaScript takes 1.2 s and Rust 0.33 s (3.6x; the naive JavaScript most people write is 14x slower than Rust), and pure Python is 48x slower than Rust. Eight of those jobs take 9.1 s in JavaScript, **blocking the event loop the whole time**, and 0.7 s on four Rust workers, which leave the event loop free (1 ms of delay). A call that does nothing costs 0.03 ms. For light work on small data, JavaScript in the same process wins: it pays no transfer.
+- **Windows:** the SDK points the standard output of the process to the error output, as it does on Unix, so `println!` is harmless. Windows does not let anything overwrite an executable that is running, so on Windows the worker runs from a **copy** (in the temporary folder, named after the time and size of your build) and the file you build stays free: `cargo build` can replace it while the workers are running, and `fusion.watch('rust')` picks the new build up. The copies of old builds are removed. `shadowCopy: true` does the same on any system, `shadowCopy: false` turns it off. The tests of the project run this on Windows.
+
+## Rust or Python
+
+| | Python | Rust |
+|---|---|---|
+| What it is for | The ecosystem: machine learning, scientific computing, any Python library | Speed, many threads, a small footprint |
+| Work per call | Calls overlap in the event loop or in threads, and the GIL limits pure-Python computation | Every call runs in its own thread: one process can use all the cores |
+| Memory of a minimal worker | 24 MB (measured with the components of the tests) | 1 MB (measured with the example worker) |
+| What you ship | Your `.py` files, and Python with its libraries on the machine | One binary. The machine does not need Rust |
+| Change it while the app runs | Save the file | Build again (`cargo build --release`): `fusion.watch('rust')` replaces the workers |
+| Contracts | `@action(...)` | `.summary().input().output()...` in code |
+
+They can be used in the same application: each runtime has its own pool, and `fusion.python(...)` and `fusion.rust(...)` are independent.
+
+## The API of the crate
+
+The whole API, with every method, is in [rust/README.md](../rust/README.md). In short:
+
+- `App::new().function(name, |call| ...)` registers a function that answers once, and `.stream(name, |call| ...)` one that sends chunks with `call.emit(value)?`.
+- `call.args` is the argument as a `Value`; `call.args["key"]` never panics. `call.is_cancelled()` tells a long function that Node.js gave up.
+- `Error::invalid("...")` is a mistake of the caller (Total.js sends its message to the client); `Error::new("...")` is a failure that stays in the log. A panic fails one call, never the worker.
+- `.on_shutdown(|| ...)` runs when the worker is asked to stop. What you do in `main` before `run()` happens before the worker says it is ready.
+- The metadata methods apply to the function registered just before them: `summary`, `input`, `output`, `query`, `params`, `permissions`, `user`, `sa`, `su`, `idempotent`, `timeout`, `id`, `mcp` and `action`.
+
+---
+
+<!-- The Rust crate: rust/README.md -->
+
+# totalfusion (Rust)
+
+Write functions in Rust and call them from Node.js and Total.js as `async` functions. This crate is the Rust side of [TotalFusion](../README.md): your program registers its functions and TotalFusion starts it, keeps a pool of workers, and talks to it through the standard input and output.
+
+A worker is a normal binary and an **isolated process**: a panic fails only the call that caused it, and even a crash of the whole process never takes Node.js down. Nothing is compiled by TotalFusion: you build the worker (`cargo build --release`) or you get it precompiled.
+
+```rust
+use totalfusion::{object, App, Call, Error};
+
+fn main() {
+    App::new()
+        .function("text.length", |call: &Call| {
+            let text = call.args["text"].as_str().ok_or_else(|| Error::invalid("text must be a string"))?;
+            Ok(object! { "length" => text.chars().count() })
+        })
+        .summary("Counts the characters of a text")
+        .input("*text:String")
+        .output("length:Number")
+        .mcp(true)
+        .run();
+}
+```
+
+```js
+fusion.configure({ rust: { binary: './rust/target/release/worker', workers: 4 } });
+
+await fusion.rust('text.length', { text: 'Hello' });   // { length: 5 }
+```
+
+## Functions
+
+- `.function(name, |call| -> Result<Value, Error>)` answers once.
+- `.stream(name, |call| -> Result<(), Error>)` sends many chunks with `call.emit(value)?`. In JavaScript: `for await (const chunk of fusion.rust.stream(name, args))`. `emit` waits when the consumer is slow (backpressure) and fails when it stops reading, so `?` ends the stream.
+- `call.args` is a `Value`. `call.args["key"]` never panics: a missing member is `Null`.
+- `call.is_cancelled()` is true when Node.js gave up (timeout, abort). A long function should look at it from time to time. A function that never looks is killed after `cancelGrace` and the worker is replaced.
+- `.on_shutdown(|| ...)` runs when the worker is asked to stop. What you do in `main` before `run()` (load a model, open a connection) happens before the worker says it is ready.
+
+## Values
+
+`Value` holds everything JSON can, plus binary data that never goes through JSON. `Vec<u8>` is a `Buffer` in JavaScript, `Vec<f32>` is a `Float32Array`, and so on for `i8`, `i16`, `u16`, `i32`, `u32`, `i64` (`BigInt64Array`), `u64` and `f64`. Build objects with `object! { "key" => value }` and arrays with `Value::array([1, 2, 3])`; read them with `as_str()`, `as_f64()`, `as_i64()`, `as_bool()`, `as_bytes()`, `as_f32s()`, `as_f64s()`, `as_i32s()`, `as_array()` and `as_object()`.
+
+NaN and infinity cannot be sent (JSON has no such numbers): the call fails with `NOT_SERIALIZABLE`.
+
+## Errors
+
+`Error::new("...")` is a failure of the function. `Error::invalid("...")` is a mistake of the caller (bad input): in Total.js its message is sent to the client, and the message of any other error stays in the log. `Error::named("DatabaseError", "...").with_code("E_DB")` gives the error a name and a code of its own. A panic becomes an error named `Panic`.
+
+## Total.js
+
+The methods that describe a function apply to the function registered just before them: `summary`, `input`, `output`, `query`, `params` (the schema syntax of Total.js, `*` means required), `permissions`, `user`, `sa`, `su`, `timeout`, `idempotent` (the call may be repeated on another worker if this one dies), `id` and `mcp`. A function that declares any of them, or calls `.action()`, becomes an action of Total.js with `fusion.register({ runtime: 'rust', rust: { binary } })`; the others stay callable from JavaScript but private. `mcp(true)` also exposes it to AI agents.
+
+`./worker --describe` prints the contracts as JSON. This is what `register()` and `fusion.doctor('rust')` read, so nothing runs to learn them.
+
+## Do not print to the standard output
+
+It carries the protocol. On Unix and on Windows the crate redirects it to the error output for you, so `println!` is harmless, but use `eprintln!` to be safe everywhere. (This is tested on Windows in the continuous integration of the project.)
+
+## Rebuilding while the application runs
+
+Windows does not let anything overwrite an executable that is running, so on Windows TotalFusion runs your worker from a copy and the file `cargo build` writes stays free (`shadowCopy`, on by default there). With `fusion.watch('rust')` the workers are replaced by the new build.
+
+## Requirements
+
+Rust 2021 edition. The only dependency is `serde_json`. Tested with Rust 1.99 on macOS (Apple silicon), and in the continuous integration on Linux, macOS and Windows.
+
+---
+
+<!-- Go: docs/go.md -->
+
+# Go
+
+Write the functions in Go, build a binary, and call it like the Python and the Rust ones. A Go worker is an **isolated process** that speaks the same protocol, so everything in this documentation applies to it as well: the pool, timeouts, cancellation, [binary data](binary-data.md), [streaming](streaming.md), [recycling and health checks](workers.md#keeping-workers-healthy), Total.js actions, MCP tools and the `doctor`.
+
+## Write a worker
+
+```go
+// worker/main.go
+package main
+
+import (
+	totalfusion "github.com/totaljs-es/totalfusion/go"
+)
+
+func main() {
+	app := totalfusion.New()
+
+	app.Function("net.check", func(call *totalfusion.Call) (any, error) {
+		host, ok := call.Args.Get("host").AsString()
+		if !ok {
+			return nil, totalfusion.Invalid("host must be a string")
+		}
+		return map[string]any{"host": host, "up": true}, nil // the real work goes here
+	}).Summary("Checks if a host answers").Input("*host:String").MCP(true)
+
+	app.Run()
+}
+```
+
+## Build it and call it
+
+The module is not on a registry: the npm package ships its sources, so the `go.mod` of your worker points to them:
+
+```
+module worker
+
+go 1.21
+
+require github.com/totaljs-es/totalfusion/go v0.0.0
+
+replace github.com/totaljs-es/totalfusion/go => ../node_modules/totalfusion/go
+```
+
+```bash
+cd worker && go build -o worker
+```
+
+```js
+fusion.configure({ go: { binary: './worker/worker', workers: 4 } });
+
+const result = await fusion.go('net.check', { host: 'example.com' });
+
+for await (const chunk of fusion.go.stream('count.up', { n: 10 })) { /* a function registered with app.Stream() */ }
+
+// Total.js: the functions that declare their contract become actions
+await fusion.register({ runtime: 'go', go: { binary: './worker/worker' } });
+```
+
+The guide of the module, with the whole API, is in [go/README.md](../go/README.md). A complete example is in [examples/go](../examples/go).
+
+## Good to know
+
+- **Nothing is compiled for you.** `binary` is the path of a worker you built (or got precompiled), so the people who only run the application do not need Go. `fusion.doctor('go')` and `npx totalfusion doctor --runtime go --binary ./worker` check that the file exists, can be executed, answers and speaks the same protocol version.
+- **It compiles for any system from any system.** The module is pure Go (no `cgo`), so `GOOS=linux GOARCH=amd64 go build` produces a Linux worker on your Mac, with no extra toolchain. The module is compiled and tested on Linux, macOS and Windows in the continuous integration, and it was checked with `go vet` for FreeBSD from macOS. A binary built for another system is the most common mistake, so the `doctor` reads the header of the worker, says for which system it was built (Linux, macOS or Windows, and the architecture) and gives the `GOOS` and `GOARCH` that build it for this one, without running it. An x64 worker on a Mac with Apple silicon or on Windows on ARM is only a warning: it runs emulated.
+- **A panic fails one call, not the worker.** The stack goes to the error output (which Node.js shows) and the call fails with an error named `Panic`. A crash of the process is a `WORKER_CRASHED` error and the worker is replaced; Node.js never goes down.
+- **Same options as the other runtimes:** `workers`, `concurrency`, `timeout`, `maxQueue`, `maxCalls`, `maxMemory`, `healthInterval`, `cancelGrace`... plus `args`, `env` and `cwd` for the process. Every call of a worker runs in its own goroutine, so `concurrency` makes one process use all the cores (see [Several calls at the same time](workers.md#several-calls-at-the-same-time)).
+- **Cancellation is a `context.Context`.** `call.Context()` is cancelled when Node.js gives up on the call (a timeout, an `AbortSignal`, a consumer that leaves a stream), so you can pass it to a database or an HTTP request and the work stops. `call.Cancelled()` is the same as a boolean.
+- **Contracts are declared in code**, with the same names as `@action` in Python (`Summary`, `Input`, `Output`, `Query`, `Params`, `Permissions`, `MCP`...). The binary prints them with `--describe`.
+- **Where Go pays off.** Heavy CPU work that should not block Node.js and that can use several cores, and the code that Go is good at: network tools, scanners, pipelines, anything with a Go library. For the longest Collatz chain below 3 million (the same algorithm in each language, eight cores, macOS, three alternating runs on the same day): optimized JavaScript takes 0.95 s, Go 0.48 to 0.50 s (1.9x faster than JavaScript) and [Rust](rust.md) 0.36 s, so for this loop Rust is about 1.35 times faster than Go. Eight of those jobs take 7.5 s in JavaScript, **blocking the event loop the whole time**, and 1.0 to 1.1 s on four Go workers (0.75 to 0.84 s on four Rust workers), which leave the event loop free (0.4 to 4.9 ms of delay in the three Go runs). A call that does nothing costs 0.03 ms. For light work on small data, JavaScript in the same process wins: it pays no transfer.
+- **The memory of a worker.** A minimal Go worker uses about 11 MB (the worker of the tests, measured with `ps`), because the Go runtime brings its own. `Memory()` reports the resident memory on Linux and the private bytes on Windows. On macOS, where asking the system for the footprint needs `cgo`, it reports the memory that the Go runtime holds, which is what a worker written in Go uses and agrees with `ps` within a megabyte in the measurement; memory that a C library allocates would not be counted there, and `maxMemory` would not see it.
+- **Windows:** the SDK points the standard output of the process to the error output, as it does on Unix, so `fmt.Println` is harmless. (On Unix the redirection is done on the file descriptor, on Windows on the handle and on `os.Stdout`.) Windows does not let anything overwrite an executable that is running, so on Windows the worker runs from a **copy** (in the temporary folder, named after the time and size of your build) and the file you build stays free: `go build` can replace it while the workers are running, and `fusion.watch('go')` picks the new build up. The copies of old builds are removed. `shadowCopy: true` does the same on any system, `shadowCopy: false` turns it off.
+
+## As a WebAssembly module
+
+The functions of a worker can also be compiled to WebAssembly, which runs in a sandbox without files, network or environment and in one file for every system. It is not a native worker: it runs one call at a time and it is slower. See [WebAssembly](webassembly.md).
+
+## Go, Rust or Python
+
+| | Python | Rust | Go |
+|---|---|---|---|
+| What it is for | The ecosystem: machine learning, scientific computing, any Python library | Speed, many threads, a small footprint | Network and infrastructure code, many calls at once, easy to build for any system |
+| Work per call | Calls overlap in the event loop or in threads, and the GIL limits pure-Python computation | Every call runs in its own thread | Every call runs in its own goroutine |
+| Memory of a minimal worker | 24 MB (measured with the components of the tests) | 1 MB (measured with the example worker) | 11 MB (measured with the worker of the tests) |
+| What you ship | Your `.py` files, and Python with its libraries on the machine | One binary. The machine does not need Rust | One binary. The machine does not need Go |
+| Build for another system | Nothing to build | The target has to be installed, and usually a linker for it | `GOOS` and `GOARCH`, nothing else |
+| Change it while the app runs | Save the file | Build again: `fusion.watch('rust')` | Build again (`go build`): `fusion.watch('go')` replaces the workers |
+| Contracts | `@action(...)` | `.summary().input().output()...` in code | `.Summary().Input().Output()...` in code |
+
+They can be used in the same application: each runtime has its own pool, and `fusion.python(...)`, `fusion.rust(...)` and `fusion.go(...)` are independent.
+
+## The API of the module
+
+The whole API, with every method, is in [go/README.md](../go/README.md). In short:
+
+- `totalfusion.New().Function(name, func(call *Call) (any, error))` registers a function that answers once, and `.Stream(name, func(call *Call) error)` one that sends chunks with `call.Emit(value)`, which returns an error when the consumer is gone: return it and the stream ends.
+- `call.Args` is the argument as a `Value`; `call.Args.Get("key")` never panics, and `.AsString()`, `.AsFloat()`, `.AsInt()`, `.AsBytes()`, `.AsFloat32s()`... tell you whether the value is what you expected.
+- `totalfusion.Invalid("...")` is a mistake of the caller (Total.js sends its message to the client); any other error (`totalfusion.NewError("...")` or a plain Go `error`) is a failure that stays in the log. `totalfusion.Named("DatabaseError", "...").WithCode("E_DB")` gives the error a name and a code of its own.
+- `.OnShutdown(func() { ... })` runs when the worker is asked to stop. What you do in `main` before `Run()` happens before the worker says it is ready.
+- The metadata methods apply to the function registered just before them: `Summary`, `Input`, `Output`, `Query`, `Params`, `Permissions`, `User`, `SA`, `SU`, `Idempotent`, `Timeout`, `ID`, `MCP` and `Action`.
+
+---
+
+<!-- The Go module: go/README.md -->
+
+# totalfusion (Go)
+
+Write functions in Go and call them from Node.js and Total.js as `async` functions. This module is the Go side of [TotalFusion](../README.md): your program registers its functions and TotalFusion starts it, keeps a pool of workers, and talks to it through the standard input and output.
+
+A worker is a normal binary and an **isolated process**: a panic fails only the call that caused it, and even a crash of the whole process never takes Node.js down. Nothing is compiled by TotalFusion: you build the worker (`go build`) or you get it precompiled.
+
+```go
+package main
+
+import (
+	"unicode/utf8"
+
+	totalfusion "github.com/totaljs-es/totalfusion/go"
+)
+
+func main() {
+	app := totalfusion.New()
+
+	app.Function("text.length", func(call *totalfusion.Call) (any, error) {
+		text, ok := call.Args.Get("text").AsString()
+		if !ok {
+			return nil, totalfusion.Invalid("text must be a string")
+		}
+		return map[string]any{"length": utf8.RuneCountInString(text)}, nil
+	}).Summary("Counts the characters of a text").Input("*text:String").Output("length:Number").MCP(true)
+
+	app.Run()
+}
+```
+
+```js
+fusion.configure({ go: { binary: './worker/worker', workers: 4 } });
+
+await fusion.go('text.length', { text: 'Hello' });   // { length: 5 }
+```
+
+The import path has a `go` at its end and the package is called `totalfusion`, so import it with that name, as above.
+
+## Installing the module
+
+The module is not on a registry: the npm package ships its sources, and the `go.mod` of your worker points to them.
+
+```
+module worker
+
+go 1.21
+
+require github.com/totaljs-es/totalfusion/go v0.0.0
+
+replace github.com/totaljs-es/totalfusion/go => ../node_modules/totalfusion/go
+```
+
+It needs Go 1.21 or newer and has no dependencies at all (only the standard library, and no `cgo`).
+
+## Functions
+
+- `app.Function(name, func(call *Call) (any, error))` answers once.
+- `app.Stream(name, func(call *Call) error)` sends many chunks with `call.Emit(value)`. In JavaScript: `for await (const chunk of fusion.go.stream(name, args))`. `Emit` waits when the consumer is slow (backpressure) and returns `ErrCancelled` when it stops reading, so `if err := call.Emit(x); err != nil { return err }` ends the stream.
+- `call.Args` is a `Value`. `call.Args.Get("key")` never panics: a missing member is null.
+- `call.Context()` is a `context.Context` that is cancelled when Node.js gave up (timeout, abort) or the worker is asked to stop. Pass it to what the function calls. `call.Cancelled()` is the same as a boolean. A function that never looks is killed after `cancelGrace` and the worker is replaced.
+- `app.OnShutdown(func() { ... })` runs when the worker is asked to stop. What you do in `main` before `Run()` (load a model, open a connection) happens before the worker says it is ready.
+- Every call runs in its own goroutine, so a function must be safe to run at the same time as itself when `concurrency` is more than 1.
+
+## Values
+
+`Value` holds everything JSON can, plus binary data that never goes through JSON. A function receives it as `call.Args`:
+
+| JavaScript | Go (what you read) |
+|---|---|
+| string, boolean, `null` | `AsString()`, `AsBool()`, `IsNull()` |
+| number | `AsFloat()` for any number, `AsInt()` for an integer (or a float with no decimals) |
+| array, object | `At(i)`, `Get(key)`, `AsArray()`, `AsObject()` |
+| `Buffer`, `Uint8Array`, `ArrayBuffer` | `AsBytes()` (`[]byte`) |
+| `Float32Array`, `Float64Array`, `Int32Array` | `AsFloat32s()`, `AsFloat64s()`, `AsInt32s()` |
+| `Int8Array`, `Int16Array`, `Uint16Array`, `Uint32Array`, `BigInt64Array`, `BigUint64Array` | `Raw()`, as `[]int8`, `[]int16`, `[]uint16`, `[]uint32`, `[]int64`, `[]uint64` |
+
+Each `As` method returns the value and whether it was of that type. `Raw()` is the plain Go value (`nil`, `bool`, `int64`, `float64`, `string`, `[]any`, `map[string]any`, or a slice).
+
+A function returns plain Go values: `nil`, booleans, any integer or float, strings, `[]any`, `map[string]any`, and the slices `[]byte` (a `Buffer`), `[]int8`, `[]int16`, `[]uint16`, `[]int32`, `[]uint32`, `[]int64`, `[]uint64`, `[]float32` (a `Float32Array`) and `[]float64`, which travel as raw bytes. Anything else (a struct with `json` tags, a `[]string`, a `map[string]int`) goes through `encoding/json`, which cannot carry binary data. `call.Args.Raw()` can be returned as it is, to echo what arrived.
+
+NaN and infinity cannot be sent (JSON has no such numbers): the call fails with `NOT_SERIALIZABLE`.
+
+## Errors
+
+`totalfusion.NewError("...")` (or a plain Go `error`) is a failure of the function. `totalfusion.Invalid("...")` is a mistake of the caller (bad input): in Total.js its message is sent to the client, and the message of any other error stays in the log. `totalfusion.Named("DatabaseError", "...").WithCode("E_DB")` gives the error a name and a code of its own; it is found even when it is wrapped (`fmt.Errorf("...: %w", err)`). A panic becomes an error named `Panic`, and its stack goes to the error output. `Invalidf` and `Errorf` take a format.
+
+## Total.js
+
+The methods that describe a function apply to the function registered just before them: `Summary`, `Input`, `Output`, `Query`, `Params` (the schema syntax of Total.js, `*` means required), `Permissions`, `User`, `SA`, `SU`, `Timeout` (a `time.Duration`), `Idempotent` (the call may be repeated on another worker if this one dies), `ID` and `MCP`. A function that declares any of them, or calls `.Action()`, becomes an action of Total.js with `fusion.register({ runtime: 'go', go: { binary } })`; the others stay callable from JavaScript but private. `MCP(true)` also exposes it to AI agents.
+
+`./worker --describe` prints the contracts as JSON. This is what `register()` and `fusion.doctor('go')` read, so nothing runs to learn them.
+
+## Do not print to the standard output
+
+It carries the protocol. On Unix and on Windows the module redirects it to the error output for you, so `fmt.Println` is harmless, but use `fmt.Fprintln(os.Stderr, ...)` or the `log` package to be safe everywhere.
+
+## Memory
+
+`totalfusion.Memory()` is the memory of the process in bytes, and whether the system tells it. Every answer carries it, and it is what `maxMemory` looks at. Linux: resident set size. Windows: the private bytes of the process. Other systems, macOS included: the memory that the Go runtime holds, because asking for the footprint needs `cgo`.
+
+## As a WebAssembly module
+
+The same functions can run in the sandbox of [WebAssembly](../docs/webassembly.md): no files, no network, no environment. Call `app.Wasm()` in an `init` function (a module of this kind does not run `main`), build with Go 1.24 or newer, and call it with `fusion.wasm(...)`:
+
+```go
+func init() {
+	app := totalfusion.New()
+	app.Function("math.add", add).Input("*a:Number\n*b:Number")
+	app.Wasm()
+}
+
+func main() {}
+```
+
+```bash
+GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o module.wasm
+```
+
+A module answers once per call: `Emit` returns an error, and a function registered with `app.Stream` is refused. Nothing changes in the code of the other functions.
+
+## Building for another system
+
+```bash
+GOOS=linux   GOARCH=amd64 go build -o worker-linux .
+GOOS=windows GOARCH=amd64 go build -o worker.exe .
+GOOS=darwin  GOARCH=arm64 go build -o worker-mac .
+```
+
+The module needs no `cgo` and no other tool, so this works from any system.
+
+## Rebuilding while the application runs
+
+Windows does not let anything overwrite an executable that is running, so on Windows TotalFusion runs your worker from a copy and the file `go build` writes stays free (`shadowCopy`, on by default there). With `fusion.watch('go')` the workers are replaced by the new build.
+
+## Requirements
+
+Go 1.21 or newer. Standard library only. Tested with Go 1.21 and 1.27 on macOS (Apple silicon), and in the continuous integration on Linux, macOS and Windows.
+
+---
+
+<!-- WebAssembly: docs/webassembly.md -->
+
+# WebAssembly
+
+Call functions that were compiled to WebAssembly, from Node.js and Total.js, like any other runtime. What sets it apart is that **a WebAssembly module runs in a sandbox**: it cannot read or write files, it cannot open a connection and it cannot see your environment. The other runtimes run your code with your permissions; a module runs with none that you did not give it, and you do not give it any. It is also **one `.wasm` file that runs on any system**.
+
+A module runs in a process of its own (a small Node.js host that TotalFusion starts), so everything in this documentation applies to it as well: the pool, timeouts, [binary data](binary-data.md), [recycling and health checks](workers.md#keeping-workers-healthy), Total.js actions, MCP tools and the `doctor`. A function that never returns is killed after the timeout, like in any other runtime.
+
+## Write a module
+
+The Go module of TotalFusion has the SDK (Go 1.24 or newer is needed, the first that can export functions to WebAssembly). The functions are registered in an `init` function, because a module of this kind does not run `main`:
+
+```go
+// module/main.go
+package main
+
+import (
+	totalfusion "github.com/totaljs-es/totalfusion/go"
+)
+
+func init() {
+	app := totalfusion.New()
+
+	app.Function("math.add", func(call *totalfusion.Call) (any, error) {
+		a, okA := call.Args.Get("a").AsFloat()
+		b, okB := call.Args.Get("b").AsFloat()
+
+		if !okA || !okB {
+			return nil, totalfusion.Invalid("a and b must be numbers")
+		}
+
+		return map[string]any{"sum": a + b}, nil
+	}).Summary("Adds two numbers").Input("*a:Number\n*b:Number").Output("sum:Number").MCP(true)
+
+	app.Wasm() // this app is the module
+}
+
+func main() {}
+```
+
+The `go.mod` of the module points to the sources that the npm package ships, as in [Go](go.md#build-it-and-call-it). Build it for WebAssembly, as a reactor:
+
+```bash
+cd module && GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o module.wasm
+```
+
+```js
+fusion.configure({ wasm: { module: './module/module.wasm', workers: 2 } });
+
+const result = await fusion.wasm('math.add', { a: 2, b: 3 });   // { sum: 5 }
+
+// Total.js: the functions that declare their contract become actions
+await fusion.register({ runtime: 'wasm', wasm: { module: './module/module.wasm' } });
+```
+
+A complete example is in [examples/wasm](../examples/wasm) and [examples/wasm.js](../examples/wasm.js).
+
+## What the sandbox does
+
+These are tested with a module that tries to get out ([tests/wasm.test.js](../tests/wasm.test.js)):
+
+| | |
+|---|---|
+| **Files** | None. The module is given no directories, so it cannot read a file (it tried `/etc/hosts` and a file of the test suite) nor write one (the file did not exist afterwards). |
+| **Environment** | None. The process has your environment, the module sees no variable and no argument. |
+| **Network** | None. The WASI of Node.js has no function to open a connection, and the module cannot import anything else. |
+| **Imports** | Only WASI. A module that imports anything else (for example a function of the host) is refused, and the `doctor` says which one. |
+| **What it prints** | Goes to the error output, never to the protocol. |
+| **A function that does not return** | Is killed after `timeout` (and `cancelGrace`) and the worker is replaced. |
+| **A trap** (`unreachable`, an out of bounds access) | Fails that call with an error of code `WASM_TRAP`, and the module starts again with a new instance, so a failure never leaves broken state behind. The same when the module calls `exit` (`WASM_EXIT`). |
+
+What it does not do, so you do not count on it:
+
+- **It is not a guarantee against a bug of the engine.** The sandbox is the one of WebAssembly in V8 and of WASI in Node.js. The host is a normal Node.js process with your permissions: if the engine had a flaw that lets a module escape, it would be as free as that process. For untrusted code, add what the system gives you (a container, a user without privileges).
+- **Time and random numbers are available** (WASI gives them), so a module is not deterministic.
+- **The memory is not capped during a call.** A module can grow up to the limit that it declares (and WebAssembly never goes beyond 4 GiB). `maxMemory` looks at the memory of the process after each call and replaces the worker that went over; a function that allocates without limit inside one call is stopped by the timeout, not by the memory.
+
+## Good to know
+
+- **A worker runs one call at a time.** A module is single threaded: use `workers` to run calls in parallel. `concurrency` does not make a worker run calls at once: they wait inside the process.
+- **No streams.** A module answers once per call. A function called with `fusion.wasm.stream()` is a stream of one chunk, and a function registered as a stream in the SDK is refused (`STREAMING_FUNCTION`).
+- **The state lives as long as the instance.** A global variable of the module keeps its value between calls, and it is lost when the worker is replaced, after a trap or when the module is built again.
+- **Binary data** travels as in every runtime, without base64: a 20 MB buffer reaches the module in 10 ms (measured).
+- **Reload:** `fusion.watch('wasm')` replaces the workers when the `.wasm` file is built again.
+- **Contracts** are declared with the same methods as in Go (`Summary`, `Input`, `Output`, `MCP`...). A module that does not export `tf_describe` can still be called from JavaScript, but none of its functions becomes an action.
+- **Requirements:** the host uses `node:wasi`. The tests run with Node.js 20, 22 and 24 in the continuous integration of the project, and with Node.js 26 locally.
+
+## Measured
+
+On one machine (Apple M3, eight cores, macOS, Node.js 26, a Go module of 5.8 MB), three runs each:
+
+| | |
+|---|---|
+| The first call, which starts the worker and the module | 57 to 61 ms |
+| A call that adds two numbers | 0.05 ms |
+| A worker (the Node.js host and the Go runtime inside the module) | 113 MB |
+| 20 MB sent to the module | 10 ms |
+| The longest Collatz chain below 3 million | 1.41 to 1.46 s |
+| Eight of those jobs on four workers | 2.5 to 2.6 s, with up to 6 ms of delay in the event loop |
+
+**WebAssembly is not the way to speed.** The same loop takes 0.49 s in a native Go worker, 0.36 s in a Rust one and 0.95 s in optimized JavaScript on the same machine, so a Go program compiled to WebAssembly is about three times slower than native Go, and slower than JavaScript for this loop. Other compilers can produce faster code; only Go was tried. Use WebAssembly for what it gives you: the sandbox and one file for every system.
+
+## The ABI
+
+A module is a **reactor** (a library, not a program: it must not export `_start`) that imports nothing but `wasi_snapshot_preview1`, and exports:
+
+| Export | |
+|---|---|
+| `memory` | Its memory. |
+| `tf_abi() -> i32` | The version of this ABI: `1`. |
+| `tf_alloc(size: i32) -> i32` | A buffer of `size` bytes in its memory, for the host to fill. |
+| `tf_free(pointer: i32, size: i32)` | Frees a buffer, the ones that it returned too. |
+| `tf_describe() -> i32` | A buffer with the contracts (optional). |
+| `tf_call(name_pointer, name_length, body_pointer, body_length: i32) -> i32` | Runs the function and returns a buffer with the answer. |
+
+- A **buffer that the module returns** is a pointer to its length (a `uint32`, little endian) followed by the bytes. The host copies it and frees it with `tf_free(pointer, length + 4)`. The buffers that the host gives are freed by the host after the call.
+- The **body of a call** is a frame of the [protocol](how-it-works.md#the-protocol) without its first four bytes: `json length | json | count | length of each part | the parts`, all integers big endian, with the arguments as the JSON and the binary data as parts (`{ "$bin": 0, "type": "Float32Array" }`). The **answer** has the same format, with `{ "ok": true, "data": ... }` or `{ "ok": false, "error": { "name": "...", "message": "...", "code": null } }`.
+- `tf_describe` returns plain JSON, the same that `--describe` prints in the other runtimes: `{ "actions": [{ "fn", "module", "name", "stream", "meta": { "summary", "input", ... } }], "functions": n, "errors": [] }`.
+- The module is started by calling `_initialize` (a Go reactor has it), then `tf_abi` is checked.
+
+The implementation of reference is [go/wasm_wasip1.go](../go/wasm_wasip1.go) for the module and [wasm/host.js](../wasm/host.js) for the host. Any language that can build a WASI reactor with these exports can be a module; only Go has an SDK, and it is the only one that was tested.
+
+## WebAssembly, Go or Rust
+
+| | WebAssembly | Go or Rust |
+|---|---|---|
+| What it is for | Code that you do not fully trust, or that you want to ship as one file | Speed and the whole of the system |
+| Access to the system | None | All, with your permissions |
+| Speed | About 3 times slower than native Go in the measured loop | Native |
+| What you ship | One `.wasm` that runs on any system | One binary for each system |
+| Calls at once in a worker | One | Many (threads or goroutines) |
+| Streams | No | Yes |
+| Cancel a running call | By killing the process after the timeout | The function looks at the cancellation |
+| Memory of a worker | 113 MB in the measurement | 11 MB (Go), 1 MB (Rust) |
+
+They can be used in the same application: each runtime has its own pool.
+
+---
+
+<!-- Total.js 5: docs/total5.md -->
+
+# Total.js 5
+
+TotalFusion is an extension of Total.js: the functions of a worker are registered as **actions**, so everything Total.js does with an action (validation, permissions, API routes, FlowStream, MCP) works with them. Nothing in the framework is modified.
+
+```js
+// definitions/fusion.js
+const fusion = REQUIRE('totalfusion');
+
+exports.install = function() {
+	fusion.register({ python: { path: PATH.root('python'), workers: 2 } }).then(function(result) {
+		console.log('TotalFusion:', result.ids.join(', '));
+	});
+};
+```
+
+`register` is asynchronous (it reads the contracts with a short Python process) and resolves with `{ ids, errors, warnings }`. `require('totalfusion')` works the same as `REQUIRE('totalfusion')`.
+
+Every function decorated with `@action` becomes a `NEWACTION()` named `<module>/<function>` (change it with `prefix` or `@action(id=...)`). Because they are normal actions they work with `ACTION()` and `API` routes (`ROUTE('API /v1/ +count --> contract/count')`). `register` also adds the modules with `@startup` to `preload` automatically.
+
+- **Validation first.** Total.js validates `input` with the contract before Python runs, so invalid data never reaches your function. Fields marked with `*` are required; an optional field with an invalid value is dropped by Total.js, not reported.
+- **Query and params.** Declare them in the contract like the input: `@action(input='a:Number', query='*page:Number', params='id:UID')`. Python then receives an object with the sections that were declared, already validated and converted: `{ 'input': {'a': 5}, 'query': {'page': 2}, 'params': {'id': '...'} }`. Without `query` and `params` it receives the input alone, as before. `ACTION('x', input).query({...}).params({...})`, the `API` routes and the MCP tools (`arguments: { input, query, params }`) all fill them.
+- **Who may call.** `permissions` (`'admin,editor'`: any of them), `user=True` (only a logged in user), `sa` and `su` go to `NEWACTION()` as they are, so Total.js decides before Python is reached and answers `401` otherwise. An administrator (`user.sa` or `user.su`) always passes. Python does not see the user: if a function needs to know who calls, pass what it needs in the input.
+- **MCP is opt-in.** Only functions with `mcp=True` are exposed to agents (`CONF.$mcp = true` enables the endpoint). Everything else stays internal.
+- **Errors.** A Python `ValueError` is treated as the caller's mistake and its message reaches the client. Any other exception returns `The action failed`, and the real error goes to `onerror` (default: `console.error`), so paths, queries or secrets inside exception messages are not leaked.
+- **Generators.** A function that yields is a stream, not an action: `register` skips it with a warning. Call it with `fusion.stream()` or `fusion.sse()`.
+- **Boot.** `fusion.register({ warmup: true })` loads the models before it resolves, and `preload: false` leaves the modules with `@startup` to load on their first call.
+- **Schemas.** Total.js splits the fields of a schema on commas **even inside a `// comment`**, so `'*text:String // Text, up to 2000 chars'` declares a second field called `up to 2000 chars`. `register` returns a `warnings` list for it: use parentheses or a new line.
+- **MCP.** Exposing an action as a tool uses the MCP router of Total.js 5 (`CONF.$mcp = true`). Actions and API routes work without it.
+
+## FlowStream
+
+TotalFusion has seven components for **Flow**: one for each runtime (Python, Rust, Go and WebAssembly) that calls a function with the data of each message, a **Stream** whose chunks are messages, **Events** that sends the events of the workers, and **Stats**. They use the same pool of workers as the rest of the application, and they were run in the designer of Flow 11.1. How to install and use them is in [Flow](flow.md).
+
+## Server-Sent Events
+
+A stream reaches the browser with `fusion.sse($, stream)`. See [Streaming](streaming.md#server-sent-events-from-a-totaljs-route).
+
+## Reload while you develop
+
+`fusion.register({ ..., watch: DEBUG })` replaces the workers and reads the contracts again when the code changes. See [Development](development.md).
+
+## An application to start from
+
+[examples/totaljs-app](../examples/totaljs-app) is a complete Total.js 5 application with Python: an action, an API route, Server-Sent Events and reload on edit. It was run with a real `npm install` of `total5`.
+
+---
+
+<!-- Flow: docs/flow.md -->
+
+# Flow
+
+Use your functions of Python, Rust, Go and WebAssembly as nodes of a **Total.js Flow**: draw the flow, set the function in the settings of the node, and the data of every message is the argument. TotalFusion brings seven components, in the group *TotalFusion* of the designer:
+
+| Component | What it does | Inputs | Outputs |
+|---|---|---|---|
+| **Python**, **Rust**, **Go**, **WebAssembly** | Calls a function of that runtime with the data of the message | `Input` | `Result`, `Error` |
+| **Stream** | Calls a function that sends chunks: every chunk is a message | `Start`, `Stop` | `Chunk`, `End`, `Error` |
+| **Events** | Sends a message for every event of the workers that you choose | none | `Event` |
+| **Stats** | Sends what the pools are doing | `Read` | `Stats` |
+
+They use the same pools of workers as the rest of your application: a model that a Python node loads is loaded once.
+
+## Install them
+
+The components are offered in the catalog of the designer ("Download components"), like the ones of Total.js. The catalog reads a list of components, and TotalFusion has one: [total5/flow/db.json](../total5/flow/db.json). Add it to your Flow as its second list of components, the `components2` setting (in the `config` file of the Flow application):
+
+```
+components2 : https://raw.githubusercontent.com/totaljs-es/totalfusion/main/total5/flow/db.json
+```
+
+Open the designer, press *Download components* and import the ones you want from the group TotalFusion. (That address works when the repository is public. Until then, or if you prefer your own server, put the files of [total5/flow](../total5/flow) on it and build the list with the address of your files: `node node_modules/totalfusion/scripts/flow-db.js --base https://my.server/fusion/ --out db.json`.)
+
+Then say where the workers are. Every FlowStream of Flow is a process of its own that loads `extensions.js` of your Flow application, so that is the place:
+
+```js
+// extensions.js of your Flow
+exports.install = function(instance) {
+
+	require('totalfusion').configure({
+		python: { path: '/srv/models' },
+		go: { binary: '/srv/workers/net' },
+		wasm: { module: '/srv/plugins/rules.wasm' }
+	});
+
+};
+```
+
+`totalfusion` has to be installed in the Flow application (`npm install totalfusion`). The options are the ones of [`fusion.configure()`](reference.md#options). A node whose runtime is not configured sends an error message (`INVALID_CONFIG`) and the flow goes on.
+
+## The components that call a function
+
+Python, Rust, Go and WebAssembly are the same component with another runtime, so each one is visible at a glance in the designer. The settings:
+
+- **Function** (`module.function`): the function to call, as in `fusion.python('module.function')`.
+- **Timeout**: milliseconds, `0` for none.
+- **Repeat the call on another worker if its worker dies**: only for a function that can be repeated with no harm (see [Retrying](workers.md#retrying-a-call-that-can-be-repeated)).
+
+The data of the message is the argument, and the result goes out through `Result`. A failure goes out through `Error` as `{ code, message }`: the code of the error (`REMOTE_ERROR`, `TIMEOUT`, `NOT_FOUND`...) and the first line of its message, **without the traceback**. Do not connect that output straight to a public response. The node shows how many calls it made, or its last error.
+
+## Stream
+
+For the functions that send chunks: a Python generator, or a stream function of Rust or Go. The settings are the **runtime**, the function and the timeout (the longest time without a new chunk).
+
+A message in `Start` starts a stream with the data as the argument. **Every chunk is a message** on `Chunk`, in order. When the stream ends, one message `{ chunks, cancelled }` goes out through `End`; a failure goes out through `Error` with the `code`, the `message` and how many `chunks` came before it. A message in `Stop` cancels the streams that are running (their `End` says `cancelled: true`), and so does stopping the flow or removing the node, so a model does not keep generating for nobody. WebAssembly modules cannot stream: their function is a stream of one chunk.
+
+A stream of tokens from a model, a chunk at a time, into the rest of the flow: that is this node followed by whatever you want to do with each token.
+
+## Events
+
+A message for every event that you choose, as it happens. The settings: the events (separated by commas) and the runtime to watch (or all):
+
+| Event | When |
+|---|---|
+| `worker:ready` | A worker started and is ready |
+| `worker:exit` | A worker ended (`reason`: `crash`, `recycled`, `unresponsive`, `shutdown`...) |
+| `worker:recycle` | A worker is being replaced (`reason`: `calls`, `memory`, `reload`) |
+| `worker:unresponsive` | A worker did not answer the health check |
+| `call:retry` | A call is repeated on another worker |
+| `reload` | The code changed and the workers were replaced |
+
+The message has the `event`, when it happened (`at`) and the data of the event (`runtime`, `pid`, `reason`...). The default events are the ones that need attention: `worker:exit`, `worker:recycle`, `worker:unresponsive`, `call:retry` and `reload`. Connect it to an email, a chat or a log, and the people in charge know that a worker stopped answering without anybody writing code. See [Observing the workers](workers.md#observing-the-workers).
+
+## Stats
+
+`fusion.stats()` as a message: for every runtime that started, how many workers it has, how many are ready or busy, the queue, the recycled workers and the memory of each one. It goes out when a message arrives in `Read`, and every N seconds if you set it (`0` is only on demand). The settings can be changed while the flow runs and the timer follows.
+
+## What was verified
+
+- Every component was run with the test harness of Flow that comes with Total.js 5 (`flow-test.js`): the results and the errors, the settings changing while it runs, the streams, the events and the timer. The tests are in [tests/flow.test.js](../tests/flow.test.js) and [tests/flow-logic.test.js](../tests/flow-logic.test.js).
+- They were also installed and run in the **designer of Flow 11.1** (on macOS, with Node.js 24): they appear in the catalog from the list, they are imported into a FlowStream, a flow with Stats connected to Python ran and showed its calls in the node, Events showed the start of the worker, and the settings (the list of runtimes, the numbers, the check box) work. That was done by hand, once; the tests above are the ones that run in every change.
+- The icons are the ones of the icon font of Flow, which is not the whole of Tabler: a name that the font lacks shows nothing. A test checks it.
+- The tests above run on Linux, macOS and Windows in the continuous integration of the project. Not verified: Flow in the cloud service of Total.js.
+
+---
+
+<!-- Binary data: docs/binary-data.md -->
+
+# Binary data
+
+`Buffer`, `Uint8Array`, `ArrayBuffer` and the typed arrays (`Float32Array`, `Float64Array`, `Int32Array`, ...) travel as raw bytes next to the JSON, anywhere in the arguments or in the result. No base64, no JSON array of numbers, and the bytes are not copied when the frame is built.
+
+```js
+const image = await fs.promises.readFile('photo.jpg');
+const result = await fusion.python('vision.resize', { image, width: 256 });   // result.image is a Buffer
+```
+
+```python
+def resize(data):
+    picture = Image.open(io.BytesIO(data['image']))      # data['image'] is bytes
+    ...
+    return { 'image': output.getvalue() }                  # bytes -> Buffer
+
+def normalize(data):
+    values = np.frombuffer(data['values'], dtype=np.float32)   # Float32Array -> memoryview, no copy
+    return (values - values.mean()) / values.std()             # numpy array -> Float32Array
+```
+
+| JavaScript | Python |
+|---|---|
+| `Buffer`, `Uint8Array`, `ArrayBuffer` | `bytes` |
+| `Int8Array`, `Int16Array`, `Uint16Array`, `Int32Array`, `Uint32Array`, `Float32Array`, `Float64Array`, `BigInt64Array`, `BigUint64Array` | `memoryview` of the matching type (read-only, no copy) |
+
+From Python, `bytes`, `bytearray`, `memoryview`, `array.array` and anything with the buffer protocol (NumPy arrays included) arrive as a `Buffer` (bytes) or the matching typed array. Notes:
+
+- Arrays are sent **flat**: the shape of a multi-dimensional NumPy array is not transmitted. Send it as another field (`{ data, shape }`) if you need it.
+- Typed arrays are little-endian, like every platform Node.js and CPython run on (x64 and ARM64). Big-endian buffers coming from Python (NumPy `>f4`) are converted for you.
+- Types without a JavaScript typed array (`float16`, complex numbers) arrive as raw bytes in a `Buffer`, as do boolean arrays.
+- Non-contiguous NumPy arrays (slices with a step, transposes) are sent in C order.
+- `"$bin"` is a reserved key and cannot be used in your data.
+- A frame can carry up to 512 MB in total, of which at most 64 MB can be JSON.
+- Measured against sending the same bytes as base64 inside JSON: 1 MB in 0.5 ms instead of 4.4 ms, 32 MB in 14 ms instead of 145 ms, and a 100 MB buffer (133 MB as base64, over the JSON limit) in 43 ms.
+
+## In Rust
+
+A Rust worker sends and receives the same data, as the vectors of the matching type:
+
+| JavaScript | Rust (`Value`) |
+|---|---|
+| `Buffer`, `Uint8Array`, `ArrayBuffer` | `Value::Bytes(Vec<u8>)`, read with `as_bytes()` |
+| `Float32Array`, `Float64Array` | `Value::F32`, `Value::F64`, read with `as_f32s()`, `as_f64s()` |
+| `Int32Array` | `Value::I32`, read with `as_i32s()` |
+| `Int8Array`, `Int16Array`, `Uint16Array`, `Uint32Array`, `BigInt64Array`, `BigUint64Array` | `Value::I8`, `I16`, `U16`, `U32`, `I64`, `U64` |
+
+Returning a `Vec<u8>` or a `Vec<f32>` (they convert into a `Value`) sends a `Buffer` or a `Float32Array` back. The bytes arrive in Rust as a vector (a copy of the frame, one `memcpy`), not as a view. NaN and infinity cannot be sent (JSON has no such numbers): the call fails with `NOT_SERIALIZABLE`. The crate is described in [rust/README.md](../rust/README.md).
+
+## In Go
+
+A Go worker sends and receives the same data, as the slices of the matching type:
+
+| JavaScript | Go |
+|---|---|
+| `Buffer`, `Uint8Array`, `ArrayBuffer` | `[]byte`, read with `AsBytes()` |
+| `Float32Array`, `Float64Array` | `[]float32`, `[]float64`, read with `AsFloat32s()`, `AsFloat64s()` |
+| `Int32Array` | `[]int32`, read with `AsInt32s()` |
+| `Int8Array`, `Int16Array`, `Uint16Array`, `Uint32Array`, `BigInt64Array`, `BigUint64Array` | `[]int8`, `[]int16`, `[]uint16`, `[]uint32`, `[]int64`, `[]uint64`, read with `Raw()` |
+
+Returning a `[]byte` or a `[]float32` sends a `Buffer` or a `Float32Array` back. A `[]byte` that arrives is a slice of the frame (no copy). NaN and infinity cannot be sent: the call fails with `NOT_SERIALIZABLE`. A struct or a `[]string` is sent as JSON. The module is described in [go/README.md](../go/README.md).
+
+---
+
+<!-- Streaming: docs/streaming.md -->
+
+# Streaming
+
+A Python function that **yields** is a stream: each `yield` reaches Node.js as soon as it happens. Generators can be `def` or `async def`.
+
+```python
+# python/llm.py
+def generate(data):
+    for token in model.generate(data['prompt']):
+        yield token
+```
+
+```js
+for await (const token of fusion.python.stream('llm.generate', { prompt: 'Hello' })) {
+    process.stdout.write(token);
+}
+```
+
+`fusion.stream('python', fn, args, options)` and `fusion.python.stream(fn, args, options)` return an async iterable; `.toArray()` collects everything.
+
+- **Backpressure.** The worker may run ahead of the consumer by `highWaterMark` chunks (16 by default). Each chunk you read gives it one more. A slow consumer slows the generator down instead of filling memory: with `highWaterMark: 4`, after reading 2 chunks an endless generator had advanced only to its 6th, and with no limit it kept running.
+- **Cancellation.** Leaving the loop (`break`, `return`, an exception) or aborting the `AbortSignal` stops the generator in Python and frees the worker. An `async def` generator is interrupted where it waits; a `def` generator stops between two chunks, and one that blocks without yielding is killed after `cancelGrace`, like any synchronous function.
+- **Timeout.** For a stream `timeout` is the longest time **without progress**: no chunk produced and none read. A stream can last as long as it needs while it keeps moving.
+- **Errors.** The chunks that were produced before a failure are delivered first, then the error with its Python traceback.
+- A generator called with `fusion.python()` fails with `STREAMING_FUNCTION`, and a normal function called with `stream()` is a stream of one chunk.
+- Chunks can carry binary data like any other value.
+
+Measured with a real model (DistilGPT2 on CPU, 40 tokens): the first token arrives after 61 ms and a new one every 7 ms. Cutting the stream after 5 tokens of a 500-token request stopped the generation in 43 ms.
+
+## Server-Sent Events from a Total.js route
+
+```js
+ROUTE('GET /generate/', function($) {
+    fusion.sse($, fusion.python.stream('llm.generate', { prompt: $.query.prompt }));
+});
+```
+
+`fusion.sse($, stream)` sends every chunk as `data: <json>`, the end as `event: end` and a failure as `event: error`. If the browser disconnects, the generator is cancelled, so a model does not keep generating for nobody. As in the actions, only the message of a `ValueError` reaches the client.
+
+## In Rust
+
+A function registered with `.stream()` sends its chunks with `call.emit(value)?`:
+
+```rust
+App::new()
+    .stream("count.up", |call: &Call| {
+        for number in 0..call.args["n"].as_i64().unwrap_or(0) {
+            call.emit(number)?;               // waits if the consumer is slow, fails if it stops reading
+        }
+        Ok(())
+    })
+    .run();
+```
+
+```js
+for await (const number of fusion.rust.stream('count.up', { n: 10 })) console.log(number);
+```
+
+`emit` waits while the consumer has not read the chunks that the worker is allowed to run ahead (`highWaterMark`), and it fails with a cancelled error when the consumer leaves the loop, so `?` ends the stream. A function that is not a stream and is called with `stream()` is a stream of one chunk, as in Python. The measured behaviour (backpressure, cancellation, a consumer that stops reading) is the same for every runtime: the tests run against all of them.
+
+## In Go
+
+A function registered with `app.Stream()` sends its chunks with `call.Emit(value)`:
+
+```go
+app.Stream("count.up", func(call *totalfusion.Call) error {
+	n, _ := call.Args.Get("n").AsInt()
+
+	for number := int64(0); number < n; number++ {
+		if err := call.Emit(number); err != nil { // waits if the consumer is slow, fails if it stops reading
+			return err
+		}
+	}
+
+	return nil
+})
+```
+
+```js
+for await (const number of fusion.go.stream('count.up', { n: 10 })) console.log(number);
+```
+
+`Emit` returns `totalfusion.ErrCancelled` when the consumer leaves the loop, so returning the error ends the stream. The context of the call (`call.Context()`) is cancelled at the same time.
+
+---
+
+<!-- Working with the workers: docs/workers.md -->
+
+# Working with the workers
+
+A runtime is a **pool of worker processes** that Node.js supervises. They are started on demand (`workers` is the size of the pool), every call waits in a bounded queue (`maxQueue`) until a worker has room, and a worker that dies is replaced. A call is never repeated by itself. The options are listed in the [reference](reference.md#options).
+
+## Several calls at the same time
+
+By default a worker runs **one call at a time** and the work is spread over the processes. With `concurrency: N` each worker runs up to N calls at once, which is what you want when a call spends most of its time waiting, and for Rust and Go, where every call runs in its own thread or goroutine.
+
+```js
+fusion.configure({ python: { workers: 1, concurrency: 64 } });   // 64 calls waiting for an API at once
+fusion.configure({ rust: { binary, workers: 1, concurrency: 8 } });   // 8 threads in one process
+```
+
+| Scenario | Configuration | Time | Processes / memory |
+|---|---|---|---|
+| Python, 64 calls that wait 0.2 s | 4 workers, `concurrency: 1` | 3.23 s | 4 / 94 MB |
+| | 4 workers, `concurrency: 16` | 0.21 s | 4 / 93 MB |
+| | 1 worker, `concurrency: 64` | 0.21 s | 1 / 24 MB |
+| Rust, 8 CPU jobs of 0.33 s (8 cores) | 1 worker, `concurrency: 1` | 2.68 s | 1 |
+| | 4 workers, `concurrency: 1` | 0.74 s | 4 |
+| | 8 workers, `concurrency: 1` | 0.60 s | 8 |
+| | 1 worker, `concurrency: 8` | 0.49 s | 1 |
+
+- **The next call goes to the least loaded worker**, and a new worker is started only when the room of the existing ones is not enough.
+- **Python:** `async def` functions overlap, and `def` functions run in threads. Because of the GIL, pure-Python computation does not speed up that way (use more `workers` for it); waiting for a network, a disk or a library that releases the GIL does. Calls that overlap in a worker **share its module state**: a global that a function modifies is not safe unless you protect it.
+- **Rust:** the handlers must be `Send + Sync`, which the compiler checks. The calls of a worker share its memory, so one loaded model serves all of them.
+- **WebAssembly:** a module is single threaded, so a worker runs one call at a time whatever `concurrency` says. Use `workers`.
+- **Go:** every call is a goroutine and they share the memory of the worker, so a function must be safe to run at the same time as itself (`go test -race` finds the mistakes). One loaded model serves all the calls.
+- **A call that cannot be cancelled costs the worker.** After a timeout the worker is asked to cancel the call; if it cannot (a `def` function in Python that does not return, a Rust or Go function that never looks at `is_cancelled()` or `Cancelled()`), the worker is killed after `cancelGrace` and **the calls that were running next to it fail** with `WORKER_CRASHED`. A crash does the same. Async functions in Python and functions that check `is_cancelled()` in Rust or `Cancelled()` in Go are cancelled alone.
+- **A stream keeps its slot until it ends.** A consumer that stops reading does not block the other calls of the worker, but it does hold one slot until the stream times out or is cancelled.
+- **Recycling and the health check wait for the calls in progress:** a worker that reaches `maxCalls` leaves when the last of its calls ends, and only workers with nothing running are pinged.
+- `fusion.stats()` shows `running` (calls in progress) for the pool and for every worker.
+
+## Keeping workers healthy
+
+Libraries for machine learning tend to leak memory, and a process can get stuck. Two mechanisms keep the pool in shape, and neither makes a call fail.
+
+**Recycling.** A worker is replaced after `maxCalls` calls or as soon as it uses more than `maxMemory` (`512`, `'512mb'`, `'1.5gb'`). The replacement **starts first**; the old worker keeps serving until the replacement is ready, then it leaves as soon as it is idle (its `@shutdown` hooks run). With a single worker and a model that takes seconds to load, nobody waits for the restart. The limits are therefore soft: the old worker may serve a few more calls while the replacement loads, and for a moment two workers exist, so allow for that memory. If the replacement cannot start, the old worker stays and no new attempt is made for a minute.
+
+With the DistilBERT worker of 1.35 GB and `maxCalls: 100`, 450 calls were served with two replacements: the slowest call took 32 ms (no stall while a new worker loaded the model), the pool peaked at 2.7 GB with both workers alive and went back to 1.35 GB. The median rose from 5-7 ms to 16 ms while a worker was loading, because both compete for the CPU.
+
+Memory is the resident size on Linux, the physical footprint on macOS (the value Activity Monitor shows, compressed memory included) and the private bytes on Windows (the tests that check it run on all three systems). On other systems it is not reported, `maxMemory` has no effect and Node.js emits a warning.
+
+**Health check.** Every `healthInterval` (10 s by default) idle workers get a ping. One that does not answer within `healthTimeout` (10 s) is killed and replaced at once, so the next call does not wait for a model to load. Only idle workers are checked: a busy worker is protected by the `timeout` of its call, and a long computation that holds the GIL is never mistaken for a dead worker.
+
+`fusion.stats()` shows what is going on:
+
+```js
+fusion.stats().python
+// { workers: 1, ready: 1, busy: 0, running: 0, queued: 0,
+//   recycled: { calls: 2, memory: 0, reload: 0 }, unresponsive: 0,
+//   details: [{ pid: 67025, ready: true, busy: false, running: 0, calls: 32, memory: 1417674752, age: 6120, recycling: false }] }
+```
+
+## Observing the workers
+
+`fusion` is an `EventEmitter`. Use it for logs and metrics; every event carries the `runtime` it is about.
+
+```js
+fusion.on('worker:exit', e => log.warn('worker', e.pid, 'ended:', e.reason));
+```
+
+| Event | When | Data |
+|---|---|---|
+| `worker:ready` | A worker is ready to take calls. | `pid`, `startedIn` (ms) |
+| `worker:exit` | A worker ended. | `pid`, `code`, `signal`, `running` (calls it had), `calls`, and `reason`: `crash`, `recycled` (replaced on purpose), `unresponsive`, `start-failed` or `shutdown` |
+| `worker:recycle` | A worker is going to be replaced. | `pid`, `reason` (`calls`, `memory` or `reload`), `memory`, `calls` |
+| `worker:unresponsive` | An idle worker did not answer the health check. | `pid`, `timeout` |
+| `call:retry` | A call that was declared idempotent is going to run again. | `fn`, `attempt`, `retries`, `pid` of the worker that died |
+| `reload` | The code changed and the workers are being replaced. | `files`, `replaced` |
+
+A listener that throws does not break the pool: Node.js emits a warning.
+
+## Retrying a call that can be repeated
+
+A call is **never repeated by itself**: if its worker dies it may have done part of its work, and repeating it could do it twice. If you know it is harmless to run it again (a calculation, a query, a conversion), say so and a worker that dies does not fail the call:
+
+```js
+await fusion.python('prices.convert', data, { idempotent: true });                 // one more try
+await fusion.python('prices.convert', data, { idempotent: true, retries: 3 });
+```
+
+```python
+@action(summary='Converts a price', input='*amount:Number', idempotent=True)       # in the contract: Total.js does it for every call
+```
+
+In Rust, `.idempotent(true)` after the function, and in Go `.Idempotent(true)`. The call runs again on another worker, first in the queue, up to `retries` times (default 1); then it fails with `WORKER_CRASHED` as usual. This is what saves the calls that were running next to a call that had to be killed (see [Several calls at the same time](workers.md#several-calls-at-the-same-time)). It does **not** repeat a call that timed out, one that failed with an error of its own, a stream, or anything while the pool shuts down, and a function that kills its worker every time costs `retries + 1` workers, no more. The timeout counts for every attempt.
+
+---
+
+<!-- Errors and cancellation: docs/errors.md -->
+
+# Errors and cancellation
+
+Every error is a `FusionError` with a stable `code`.
+
+| Code | Meaning |
+|---|---|
+| `REMOTE_ERROR` | The function in the worker raised (Python) or returned an error (Rust and Go). `err.remote` has `name`, `message` and, in Python, `traceback`, which is also appended to `err.stack`. A function can give its error a `code` of its own. |
+| `TIMEOUT` / `ABORTED` | The call exceeded its timeout or its `AbortSignal` fired. |
+| `STREAMING_FUNCTION` | A generator was called with `fusion.python()`: use `fusion.stream()`. |
+| `CANCELLED` | The stream was cancelled by its consumer. |
+| `WORKER_CRASHED` | The worker died during the call. The call is **not** retried, because it may have had side effects, unless it was declared idempotent. The worker is replaced. |
+| `QUEUE_FULL` | The bounded queue is full: backpressure instead of unbounded memory growth. |
+| `NOT_FOUND` | Unknown module or function (or not exposed). |
+| `NOT_SERIALIZABLE` / `ENCODE_ERROR` | The result / the arguments are not valid JSON. |
+| `SPAWN_FAILED` / `START_FAILED` / `START_TIMEOUT` | The interpreter or the worker was not found, cannot start, or did not become ready in `startTimeout`. `err.hint` says how to install a missing library. |
+| `PROTOCOL_MISMATCH` | The worker speaks another version of the protocol (a Rust or Go worker built with another version of the crate or the module). |
+| `WASM_TRAP` / `WASM_EXIT` | A [WebAssembly](webassembly.md) module trapped (an out of bounds access, `unreachable`) or ended its own process while it ran the call. The call fails, and the module starts again with a new instance. |
+| `INVALID_CONFIG` / `ALREADY_STARTED` | An option is wrong, or `configure()` was called after the pool started. |
+| `CLOSED` | The pool was shut down while the call was pending. |
+
+## Cancellation
+
+`async def` functions are cancelled for real (`asyncio` cancellation). Synchronous functions cannot be interrupted: after a timeout the caller is rejected immediately, and if the function does not finish within `cancelGrace` (2 s) the worker is killed and replaced.
+
+Rust workers cancel cooperatively: the function looks at `call.is_cancelled()` from time to time and returns. One that never looks is killed after `cancelGrace`, like a synchronous function in Python.
+
+Go workers do the same with `call.Cancelled()`, and with `call.Context()`, a `context.Context` that is cancelled at the same time and that can be passed to whatever the function calls.
+
+---
+
+<!-- Development and diagnosis: docs/development.md -->
+
+# Development and diagnosis
+
+Two things make the daily work easier: the workers are replaced when you change the code, and one command tells you what is wrong with the environment.
+
+## Development: reload when the code changes
+
+```js
+fusion.watch('python');   // replaces the workers when a .py file changes
+fusion.watch('rust');     // ... when the worker is built again (cargo build)
+fusion.watch('go');       // ... when the worker is built again (go build)
+fusion.watch('wasm');     // ... when the .wasm file is built again
+
+// Total.js: the same, and the contracts are read again, so a new, changed or removed function is an action without restarting
+await fusion.register({ python: { path: PATH.root('python') }, watch: DEBUG });
+```
+
+Save a file and the next call runs the new code. The new workers start first and the old ones leave when they are idle, so **no call is lost** while you edit. Options of `fusion.watch(runtime, options)`: `debounce` (milliseconds of quiet after the last change, default 200), `log` (a line in the console for every reload, default true) and `onreload({ runtime, files, replaced })`. It returns `{ close() }`, and `fusion.shutdown()` closes every watcher.
+
+- **What counts.** Python: the `.py` files of the components (not hidden folders, `__pycache__` or `node_modules`). Rust and Go: the binary. WebAssembly: the `.wasm` file. Many writes in a row are one reload.
+- **Changes are checked, not trusted.** The events of the system are only a hint (macOS repeats the recent ones, and an editor can save twice): the files are compared with how they were, so a save that changes nothing does not reload.
+- **A mistake does not take the application down.** A Python file with a syntax error makes the calls to that module fail with `SyntaxError` while the rest keeps working, and fixing it recovers. If a new worker cannot start (for example a `preload` module with an error) the old one keeps serving and a warning says so; the next edit tries again at once.
+- **In Total.js** an error in a file removes no action until it is fixed, and `onreload` of `register` receives the `errors`. A new module with `@startup` or a change in `preload` needs a restart of the application.
+- **Only for development.** Use `watch: DEBUG` (or `false` in production): it keeps a watcher on your code and replaces workers.
+
+## Checking your setup
+
+Before running anything, ask TotalFusion what is wrong:
+
+```bash
+npx totalfusion doctor --path ./python --venv ./.venv
+```
+
+```
+TotalFusion doctor: python
+
+[ok]    Interpreter  Python 3.12.15 (/project/.venv/bin/python, chosen by the venv option)
+[ok]    Environment  Virtual environment /project/.venv
+[ok]    Components   3 modules in /project/python, 2 actions (1 streaming)
+[error] Libraries    Not installed: sklearn (pip: scikit-learn) used by classifier; torch used by sentiment
+                     Fix: /project/.venv/bin/python -m pip install scikit-learn torch
+
+1 problem to fix
+```
+
+The same from code: `const report = await fusion.doctor('python')` gives `report.ok`, `report.checks` (each with `status`, `name`, `message` and, when there is something to do, `fix`) and `report.text`. The command exits with `0` when everything is in order (warnings are advice), `1` when something has to be fixed and `2` for a wrong usage; `--json` prints the report as JSON. Options: `--runtime python|rust|go|wasm`, `--path`, `--venv`, `--python`, `--requirements`, `--preload a,b`, `--binary` (Rust and Go: with Go, say `--runtime go` too), `--module` (WebAssembly) and `--max-memory 2gb`.
+
+It looks at the interpreter (version, where it was chosen from, virtual environment or system Python), the components (syntax errors, contracts that cannot be read, `preload` modules that do not exist), the libraries they import and `requirements.txt`. **Nothing is imported, run or installed**: the components are read as text, so a module that loads a model on import is no problem. Imports inside functions are found too, and an import guarded by `try/except ImportError` is only a warning. The libraries are looked up with the same interpreter that will run the workers, which is the point: installing a library in another Python is the most common mistake. For `requirements.txt` (next to the components, in the folder above, or the `requirements` option) it checks what is installed and the version specifiers (`==`, `>=`, `<`, ...); lines with environment markers, URLs and options such as `-r` are not checked.
+
+The same hint reaches the errors at run time. A call that fails with `ModuleNotFoundError`, or a worker that cannot start because of a missing library, carries `err.hint` (and it is appended to the stack): `"numpy" is not installed in the Python that runs the workers (/project/.venv/bin/python). Install it with: /project/.venv/bin/python -m pip install numpy`. Names that differ from the package (`sklearn` is `scikit-learn`, `cv2` is `opencv-python`, `PIL` is `Pillow`, ...) are translated.
+
+## Running the tests of the project
+
+See [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+---
+
+<!-- Security: docs/security.md -->
+
+# Security
+
+TotalFusion runs your code in other processes. This page says what that protects and what it does not.
+
+## What TotalFusion does and does not do
+
+- **A worker is not a sandbox**, except a [WebAssembly](webassembly.md) module. A Python, Rust or Go worker runs your code with your user's permissions, with your environment (pass `env` to restrict it), your file system and your network. Run only components you trust.
+- **A WebAssembly module is a sandbox, with limits.** It gets no files, no network, no environment and can import nothing but WASI, and that is tested. It is the sandbox of V8 and of WASI in Node.js: the host process has your permissions, so for code you do not trust at all, add a container or a user without privileges. See [WebAssembly](webassembly.md#what-the-sandbox-does).
+- **Nothing is downloaded, compiled or installed for you.** The worker of Python uses the standard library, and the libraries are yours. A Rust or a Go worker is a binary you built or got precompiled.
+- **Agents see only what you expose.** An action is an MCP tool only if its function says `mcp`. The MCP endpoint of Total.js (`CONF.$mcp = true`) has no authentication unless you add one (`Total.mcp.auth`): turn it on only on a machine you control, and put authentication in front of it before anything else.
+- **Total.js validates before your code runs.** The input, `query` and `params` are checked against the contract, and `permissions`, `user`, `sa` and `su` are enforced by the framework before the function is reached. Your function does not see the user.
+- **Errors do not leak.** A `ValueError` in Python, `Error::invalid` in Rust or `Invalid` in Go is a mistake of the caller and its message reaches the client. Any other failure returns "The action failed" and the real error goes to the log (`onerror`), so paths, queries and secrets inside the messages of exceptions stay in your server.
+- **Python function names are restricted** to modules inside your components directory. That protects you from mistakes (calling `os.system` through a typo), not from an attacker: it is not a security boundary.
+- **Calls are never repeated by themselves.** A call that was running when its worker died may have done part of its work. Only a call you declare idempotent is repeated.
+- **`"$bin"` is a reserved key** of the protocol and cannot appear in your data.
+
+## Reporting a problem
+
+Open an issue in the repository. Do not include secrets in it.
+
+---
+
+<!-- Reference: docs/reference.md -->
+
+# Reference
+
+## Options
+
+The options of `fusion.configure({ python: {...} })`, `fusion.configure({ rust: {...} })` and `fusion.configure({ go: {...} })` and `fusion.configure({ wasm: {...} })`:
+
+| Option | Runtime | Default | |
+|---|---|---|---|
+| `workers` | both | `1` | Processes in the pool. They start on demand. |
+| `concurrency` | both | `1` | Calls a worker runs at the same time. |
+| `timeout` | both | `30000` | Milliseconds per call (in a stream, without progress). `0` disables it. |
+| `maxQueue` | both | `1000` | Calls waiting for a worker before `QUEUE_FULL`. |
+| `startTimeout` | both | `30000` | Milliseconds a worker has to become ready (raise it for big models). |
+| `cancelGrace` | both | `2000` | Milliseconds a worker has to cancel a call before it is killed. |
+| `maxCalls` | both | never | Replace a worker after this many calls. |
+| `maxMemory` | both | no limit | Replace a worker that uses more: bytes, `'512mb'`, `'1.5gb'`. |
+| `healthInterval` | both | `10000` | Ping idle workers every N ms. `0` disables it. |
+| `healthTimeout` | both | `10000` | Milliseconds a worker has to answer a ping. |
+| `forwardStderr` | both | `true` | Show what the workers write to their error output. |
+| `env` | both | `process.env` | The environment of the workers. |
+| `path` | Python | `./python` | The directory with your components. |
+| `python` | Python | | The interpreter command (wins over `venv`). |
+| `venv` | Python | | A virtual environment whose interpreter is used. |
+| `preload` | Python | none | Modules to import (running their `@startup`) before a worker is ready. |
+| `requirements` | Python | `requirements.txt` | The file that `doctor` checks. |
+| `binary` | Rust, Go | | The path of the worker you built. |
+| `module` | WebAssembly | | The path of the `.wasm` file. See [WebAssembly](webassembly.md). |
+| `args` | Rust, Go | none | Arguments for the worker. |
+| `cwd` | Rust, Go, WebAssembly | folder of the binary or module | Working directory of the worker. |
+| `shadowCopy` | Rust, Go | `true` on Windows | Run the worker from a copy, see [Rust](rust.md) and [Go](go.md). |
+
+Options of a single call (`fusion.python(fn, args, options)`): `timeout`, `signal` (an `AbortSignal`), `idempotent` and `retries` (see [Retrying](workers.md#retrying-a-call-that-can-be-repeated)), and for a stream `highWaterMark`.
+
+The methods: `fusion.python(fn, args, options)`, `fusion.rust(...)` and `fusion.go(...)` and `fusion.wasm(...)` (or `fusion.call(runtime, fn, args, options)`), `fusion.stream(...)` and `fusion.python.stream(...)` / `fusion.rust.stream(...)` / `fusion.go.stream(...)` / `fusion.wasm.stream(...)`, `fusion.describe(runtime)`, `fusion.warmup(runtime)`, `fusion.watch(runtime)`, `fusion.doctor(runtime)`, `fusion.register(options)` and `fusion.sse($, stream)` for Total.js, `fusion.stats()` and `fusion.shutdown()`.
+
+## Per-call options
+
+`fusion.python(fn, args, options)`, `fusion.rust(...)`, `fusion.go(...)`, `fusion.wasm(...)` and `fusion.call(runtime, fn, args, options)` accept:
+
+| Option | |
+|---|---|
+| `timeout` | Milliseconds for this call. In a stream, the longest time without progress. `0` disables it. |
+| `signal` | An `AbortSignal`: aborting it cancels the call. |
+| `idempotent` | The call can be repeated on another worker if its worker dies. See [Retrying](workers.md#retrying-a-call-that-can-be-repeated). |
+| `retries` | How many times (default 1 when idempotent). |
+| `highWaterMark` | In a stream, how many chunks the worker may run ahead of the consumer (default 16). |
+
+## Methods
+
+| | |
+|---|---|
+| `fusion.configure({ python: {...}, rust: {...}, go: {...}, wasm: {...} })` | Sets the options. It must run before the first call. |
+| `fusion.python(fn, args, options)` / `fusion.rust(...)` / `fusion.go(...)` / `fusion.wasm(...)` | Calls a function. Returns a promise. |
+| `fusion.call(runtime, fn, args, options)` | The same, with the runtime as an argument. |
+| `fusion.stream(runtime, fn, args, options)` / `fusion.python.stream(...)` / `fusion.rust.stream(...)` / `fusion.go.stream(...)` / `fusion.wasm.stream(...)` | Calls a function that sends chunks. Returns an async iterable with `.toArray()` and `.cancel()`. See [Streaming](streaming.md). |
+| `fusion.describe(runtime)` | The contracts of the functions, read without running them. |
+| `fusion.warmup(runtime)` | Starts all the workers and waits until they are ready. |
+| `fusion.watch(runtime, options)` | Replaces the workers when the code changes. See [Development](development.md). |
+| `fusion.doctor(runtime)` | Checks the environment. Returns `{ ok, checks, text }`. |
+| `fusion.register(options)` | Total.js: registers the functions with a contract as actions. See [Total.js 5](total5.md). |
+| `fusion.sse($, stream)` | Total.js: sends a stream to the browser as Server-Sent Events. |
+| `fusion.flow(kind, runtime)` | Total.js Flow: the function `make` of a component (`call`, `stream`, `events` or `stats`). The components of [Flow](flow.md) use it. |
+| `fusion.stats()` | What every pool is doing. See [Working with the workers](workers.md). |
+| `fusion.on(event, fn)` | The events of the workers. See [Observing the workers](workers.md#observing-the-workers). |
+| `fusion.shutdown()` | Stops the workers. They also end by themselves if the process exits. |
+
+## The command
+
+```
+npx totalfusion doctor [--runtime python|rust|go|wasm] [--path DIR] [--venv DIR] [--python COMMAND]
+                       [--requirements FILE] [--preload a,b] [--binary FILE] [--module FILE] [--max-memory 2gb] [--json]
+```
+
+It exits with `0` when everything is in order (warnings are advice), `1` when something has to be fixed and `2` for a wrong usage.
+
+## Error codes
+
+See [Errors and cancellation](errors.md).
+
+---
+
+<!-- How it works: docs/how-it-works.md -->
+
+# How it works
+
+```
+  Your code: a Total.js action, an API route, a Flow, or any Node.js program
+        |   fusion.python(...)   fusion.rust(...)   fusion.go(...)   fusion.wasm(...)   fusion.stream(...)
+        v
+  TotalFusion, in your Node.js process
+        pool of workers, queue, timeouts, cancellation, recycling, health check, events
+        |   frames over the standard input and output: JSON plus raw binary parts
+        v
+  A worker process, one of many
+        Python (python/worker.py), Rust (the totalfusion crate), Go (the totalfusion module)
+        or a WebAssembly module (wasm/host.js runs it in a sandbox)
+        |
+        v
+  Your function
+```
+
+Each worker is a process (Python, or a Rust or Go binary) that talks to Node.js over stdin/stdout with length-prefixed frames (protocol version 2: JSON for the structure plus raw binary parts, see [lib/protocol.js](../lib/protocol.js)). Calls carry an id, so responses never mix under concurrency. Workers start on demand, are replaced when they crash, exit when the parent dies and do not keep your Node.js process alive while idle.
+
+Measured on one machine (Python 3.15, Node 24, macOS arm64), warm workers, JSON payloads:
+
+| Scenario | p50 | p99 |
+|---|---|---|
+| `child_process` spawn per call | 17.6 ms | 19.8 ms |
+| TotalFusion, small call | 0.07 ms | 0.12 ms |
+| TotalFusion, 1 MB string in JSON, round trip | 3.0 ms | 4.4 ms |
+| TotalFusion, 1 MB `Buffer`, round trip | 0.5 ms | - |
+| TotalFusion, 32 MB `Buffer`, round trip | 14 ms | - |
+| TotalFusion, 100 MB `Buffer`, round trip | 43 ms | - |
+| TotalFusion, 40 MB `Float32Array`, round trip | 18 ms | - |
+
+With a real library (NumPy in a virtual environment, nearest neighbours over 50,000 vectors of 128 dimensions, see [examples/components/vectors.py](../examples/components/vectors.py)): the worker starts and builds the index once (about 145 ms with a warm disk cache), then every call takes about 3 ms (p50), against about 98 ms when a process is spawned per call.
+
+Throughput with 4 workers and trivial calls: about 23,000 calls/s. These numbers are a starting point, not a benchmark suite. Binary data does not go through JSON (see [Binary data](binary-data.md)).
+
+## The protocol
+
+Every message is a frame (all the integers are `uint32`, big endian):
+
+```
+total | json length | json | count | length of each part | the parts
+```
+
+The JSON holds the structure of the message and the binary data travels raw after it, referenced from the JSON as `{ "$bin": index, "type": "Float32Array" }`. The messages are `call`, `cancel`, `credit` (backpressure), `ping` and `bye` from Node.js, and `ready`, `chunk`, `res` and `pong` from the worker. The details are in [lib/protocol.js](../lib/protocol.js) and in the comments of the worker of each language; the Python, the Rust and the Go worker speak exactly the same protocol, which is why every feature works with all of them.
+
+## Contracts
+
+A function declares what it takes and returns with `@action(...)` in Python or `.input()`/`.output()`... in Rust and `.Input()`/`.Output()`... in Go. The contract is read without running anything: Python is read as text (an AST), and a Rust or Go worker prints it with `--describe`. `fusion.describe(runtime)` returns it, and `fusion.register()` turns it into actions of Total.js.
+
+## Adding a runtime
+
+A runtime is an adapter plus a worker that speaks the protocol. See [Go](go.md) for the one that is planned, and [CONTRIBUTING.md](../CONTRIBUTING.md#adding-a-runtime) for what an adapter must provide.
+
+---
+
+<!-- Schema of the configuration: schemas/configure.schema.json -->
+
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://raw.githubusercontent.com/totaljs-es/totalfusion/main/schemas/configure.schema.json",
+	"title": "fusion.configure()",
+	"description": "The object that fusion.configure() takes: one entry for each runtime that the application uses. Documented in docs/reference.md.",
+	"type": "object",
+	"properties": {
+		"python": {
+			"description": "Python components: a folder of .py files with functions decorated with @action.",
+			"allOf": [
+				{
+					"$ref": "#/$defs/pool"
+				}
+			],
+			"properties": {
+				"path": {
+					"type": "string",
+					"description": "The directory with your components. ./python, if absent."
+				},
+				"python": {
+					"type": "string",
+					"description": "The command of the interpreter. It wins over venv."
+				},
+				"venv": {
+					"type": "string",
+					"description": "A virtual environment whose interpreter is used."
+				},
+				"preload": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "Modules to import, running their @startup, before a worker is ready."
+				},
+				"requirements": {
+					"type": "string",
+					"description": "The file that the doctor checks. requirements.txt, if absent."
+				}
+			},
+			"unevaluatedProperties": false
+		},
+		"rust": {
+			"$ref": "#/$defs/native"
+		},
+		"go": {
+			"$ref": "#/$defs/native"
+		},
+		"wasm": {
+			"description": "A WebAssembly module that runs in a sandbox. A runtime has one module: use one Fusion for each module.",
+			"allOf": [
+				{
+					"$ref": "#/$defs/pool"
+				}
+			],
+			"properties": {
+				"module": {
+					"type": "string",
+					"description": "The path of the .wasm file."
+				},
+				"cwd": {
+					"type": "string",
+					"description": "Working directory of the worker. The folder of the module, if absent."
+				}
+			},
+			"required": [
+				"module"
+			],
+			"unevaluatedProperties": false
+		}
+	},
+	"additionalProperties": false,
+	"$defs": {
+		"pool": {
+			"type": "object",
+			"description": "The options that configure the pool of workers of a runtime: the same for every language.",
+			"properties": {
+				"workers": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Processes in the pool. They start on demand.",
+					"default": 1
+				},
+				"concurrency": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Calls that a worker runs at the same time. A WebAssembly module runs one at a time whatever this says.",
+					"default": 1
+				},
+				"timeout": {
+					"type": "integer",
+					"minimum": 0,
+					"description": "Milliseconds per call (in a stream, the longest time without progress). 0 disables it.",
+					"default": 30000
+				},
+				"maxQueue": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Calls that wait for a worker before the error QUEUE_FULL.",
+					"default": 1000
+				},
+				"startTimeout": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Milliseconds that a worker has to become ready. Raise it for big models.",
+					"default": 30000
+				},
+				"cancelGrace": {
+					"type": "integer",
+					"minimum": 0,
+					"description": "Milliseconds that a worker has to cancel a call before it is killed.",
+					"default": 2000
+				},
+				"maxCalls": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Replace a worker after this many calls. Never, if absent."
+				},
+				"maxMemory": {
+					"description": "Replace a worker that uses more memory than this: a number of bytes, or a text such as \"512mb\" or \"1.5gb\". No limit, if absent.",
+					"oneOf": [
+						{
+							"type": "integer",
+							"minimum": 1
+						},
+						{
+							"type": "string",
+							"pattern": "^\\s*\\d+(\\.\\d+)?\\s*(b|kb|mb|gb)?\\s*$"
+						}
+					]
+				},
+				"healthInterval": {
+					"type": "integer",
+					"minimum": 0,
+					"description": "Ping the idle workers every this many milliseconds. 0 disables the health check.",
+					"default": 10000
+				},
+				"healthTimeout": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Milliseconds that a worker has to answer a ping.",
+					"default": 10000
+				},
+				"forwardStderr": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show what the workers write to their error output."
+				},
+				"env": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					},
+					"description": "The environment of the workers. The process environment, if absent. A WebAssembly module never sees it."
+				}
+			}
+		},
+		"native": {
+			"description": "A worker that is a binary that you built (Rust or Go).",
+			"allOf": [
+				{
+					"$ref": "#/$defs/pool"
+				}
+			],
+			"properties": {
+				"binary": {
+					"type": "string",
+					"description": "The path of the worker you built."
+				},
+				"args": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "Arguments for the worker."
+				},
+				"cwd": {
+					"type": "string",
+					"description": "Working directory of the worker. The folder of the binary, if absent."
+				},
+				"shadowCopy": {
+					"type": "boolean",
+					"description": "Run the worker from a copy, so that the build can replace the file while it runs. True on Windows by default."
+				}
+			},
+			"required": [
+				"binary"
+			],
+			"unevaluatedProperties": false
+		},
+		"callOptions": {
+			"description": "The options of a single call: fusion.python(fn, args, options), fusion.call(runtime, fn, args, options) and fusion.stream(...). A signal (an AbortSignal) can also be given; it is not JSON.",
+			"type": "object",
+			"properties": {
+				"timeout": {
+					"type": "integer",
+					"minimum": 0,
+					"description": "Milliseconds for this call. In a stream, the longest time without progress. 0 disables it."
+				},
+				"idempotent": {
+					"type": "boolean",
+					"description": "The call can be repeated on another worker if its worker dies."
+				},
+				"retries": {
+					"type": "integer",
+					"minimum": 0,
+					"description": "How many times a call that is idempotent is repeated.",
+					"default": 1
+				},
+				"highWaterMark": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "In a stream, how many chunks the worker may run ahead of the consumer.",
+					"default": 16
+				}
+			},
+			"additionalProperties": false
+		}
+	}
+}
+
+---
+
+<!-- Schema of a contract: schemas/contract.schema.json -->
+
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://raw.githubusercontent.com/totaljs-es/totalfusion/main/schemas/contract.schema.json",
+	"title": "The contract of a function",
+	"description": "The contract that a function declares, and the description of a worker that carries them (docs/total5.md, docs/how-it-works.md).",
+	"$defs": {
+		"contract": {
+			"type": "object",
+			"description": "What a function declares about itself. The names are the same in every language: @action(...) in Python, .summary().input() in Rust, .Summary().Input() in Go.",
+			"properties": {
+				"summary": {
+					"type": "string",
+					"description": "One line for people and for the AI agent that reads the tool."
+				},
+				"input": {
+					"type": "string",
+					"description": "The schema of the input in the syntax of Total.js: \"*text:String // The text\". * means required. Total.js validates it before the function runs."
+				},
+				"output": {
+					"type": "string",
+					"description": "The schema of what the function returns."
+				},
+				"query": {
+					"type": "string",
+					"description": "The schema of the query string. With query or params declared, the function receives { input, query, params }."
+				},
+				"params": {
+					"type": "string",
+					"description": "The schema of the parameters of the route."
+				},
+				"mcp": {
+					"type": "boolean",
+					"description": "Offer the function to AI agents as an MCP tool. Off unless true."
+				},
+				"permissions": {
+					"type": "string",
+					"description": "Who may call: \"admin,editor\", any of them."
+				},
+				"user": {
+					"type": "boolean",
+					"description": "True: only a logged in user. False: only an anonymous one."
+				},
+				"sa": {
+					"type": "boolean",
+					"description": "Only a super administrator."
+				},
+				"su": {
+					"type": "boolean",
+					"description": "Only a super user."
+				},
+				"idempotent": {
+					"type": "boolean",
+					"description": "The call can be repeated on another worker if its worker dies."
+				},
+				"timeout": {
+					"type": "integer",
+					"minimum": 0,
+					"description": "Longest time of a call, in milliseconds."
+				},
+				"id": {
+					"type": "string",
+					"description": "The name of the action in Total.js, if it should not be module/function."
+				}
+			},
+			"additionalProperties": false
+		},
+		"describe": {
+			"description": "What a worker prints with --describe and what fusion.describe(runtime) resolves: the contracts, read without running any function.",
+			"type": "object",
+			"properties": {
+				"actions": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"fn": {
+								"type": "string",
+								"description": "The name to call: module.function."
+							},
+							"module": {
+								"type": "string"
+							},
+							"name": {
+								"type": "string"
+							},
+							"async": {
+								"type": "boolean"
+							},
+							"stream": {
+								"type": "boolean",
+								"description": "True for a generator (Python) or a stream function (Rust, Go): it is read with fusion.stream() and is not an action."
+							},
+							"doc": {
+								"type": [
+									"string",
+									"null"
+								]
+							},
+							"meta": {
+								"$ref": "#/$defs/contract"
+							}
+						},
+						"required": [
+							"fn",
+							"module",
+							"name",
+							"stream",
+							"meta"
+						]
+					}
+				},
+				"functions": {
+					"type": "integer",
+					"description": "How many functions the worker has, with or without a contract."
+				},
+				"startups": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "Modules with @startup (Python)."
+				},
+				"errors": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"module": {
+								"type": "string"
+							},
+							"function": {
+								"type": "string"
+							},
+							"message": {
+								"type": "string"
+							}
+						}
+					},
+					"description": "Problems that were found: a syntax error, a function registered twice."
+				},
+				"runtime": {
+					"enum": [
+						"python",
+						"rust",
+						"go",
+						"wasm"
+					]
+				},
+				"protocol": {
+					"const": 2,
+					"description": "The version of the protocol (docs/how-it-works.md)."
+				},
+				"sdk": {
+					"type": "string",
+					"description": "The version of the SDK that built the worker."
+				}
+			},
+			"required": [
+				"actions",
+				"errors"
+			]
+		}
+	},
+	"oneOf": [
+		{
+			"$ref": "#/$defs/contract"
+		},
+		{
+			"$ref": "#/$defs/describe"
+		}
+	]
+}
+
+---
+
+<!-- Tutorials: docs/tutorials/README.md -->
+
+# Tutorials
+
+Each tutorial builds something small and real, step by step. Every one has an application that you can run ([examples/tutorials](../../examples/tutorials)) and a test of the project that runs it on every change, so the commands and the answers on the page are the ones that work.
+
+| | You will | Needs |
+|---|---|---|
+| [1. A Python function as an API and as a tool for an AI agent](01-python-action-and-mcp.md) | Write a function with a contract, serve it from Total.js with validation, offer it to an agent over MCP and edit it while it runs | Node.js 20, Python 3.9 |
+| [2. Run the code of third parties in the sandbox of WebAssembly](02-wasm-sandbox.md) | Load modules of customers, watch a hostile one fail to read files, see the environment, write or connect, and cut off one that never returns | Node.js 20, Go 1.24 to build the modules |
+
+More are planned: stream the output of a model as Server-Sent Events, heavy work in Go or Rust without blocking Node.js, and a flow with alerts. They will be added here as they are written and tested.
+
+New to TotalFusion? Start with [Getting started](../getting-started.md); the tutorials go further into one use each.
+
+---
+
+<!-- A Python function as an API and as a tool for an AI agent: docs/tutorials/01-python-action-and-mcp.md -->
+
+# 1. A Python function as an API and as a tool for an AI agent
+
+You will write one Python function, and Total.js will serve it as an **API endpoint** with validated input and as a **tool that an AI agent can call**. You will change the function while the application runs and see the new answer at once. It takes about ten minutes, and it needs nothing but Python itself: no libraries to install.
+
+The finished application is in [examples/tutorials/01-python-action-and-mcp](../../examples/tutorials/01-python-action-and-mcp), and a test of the project runs it on every change, so what this page says works.
+
+## What you need
+
+- Node.js 20 or newer and Python 3.9 or newer.
+- This repository, and `npm install` in the folder of the tutorial (it installs Total.js 5 and links TotalFusion).
+
+```bash
+cd examples/tutorials/01-python-action-and-mcp
+npm install
+npm start
+```
+
+The application listens on `http://127.0.0.1:8000` and prints `TotalFusion actions: sentiment/analyze`. The rest of the page explains why.
+
+## 1. The Python function
+
+[python/sentiment.py](../../examples/tutorials/01-python-action-and-mcp/python/sentiment.py) reads a text and says if it is positive, negative or neutral:
+
+```python
+from totalfusion import action
+
+@action(
+    summary='Detects whether a text is positive, negative or neutral',
+    input='*text:String // The text to read',
+    output='label:String\nscore:Number',
+    mcp=True
+)
+def analyze(data):
+    words = [word.strip('.,;:!?"\'()').lower() for word in data['text'].split()]
+    score = sum(word in POSITIVE for word in words) - sum(word in NEGATIVE for word in words)
+
+    return {
+        'label': 'POSITIVE' if score > 0 else 'NEGATIVE' if score < 0 else 'NEUTRAL',
+        'score': score
+    }
+```
+
+The decorator is the **contract** of the function, in the schema syntax of Total.js:
+
+- `input='*text:String'`: the function takes a text, and `*` means it is required.
+- `output=...`: what it returns.
+- `summary`: one line for people, and for the AI agent that will read it.
+- `mcp=True`: it is offered to agents. Without it, the function is an action but not a tool: **an agent sees only what you say**.
+
+The function itself is plain Python. It does not know about Total.js, HTTP or JSON.
+
+## 2. Register it in Total.js
+
+[definitions/fusion.js](../../examples/tutorials/01-python-action-and-mcp/definitions/fusion.js):
+
+```js
+const fusion = REQUIRE('totalfusion');
+
+exports.install = function() {
+
+	fusion.register({ python: { path: PATH.root('python') }, watch: DEBUG });
+
+	ROUTE('API  /api/  +sentiment_analyze  -->  sentiment/analyze');
+};
+```
+
+`fusion.register()` reads the contracts of the folder `python/` **without running anything**, and creates a Total.js action for each function that declares one: `sentiment/analyze`. After that it is an action like any other: `ACTION('sentiment/analyze', ...)`, an API route, a Flow node. The second line is the route: a `POST` to `/api/` with `{ "schema": "sentiment_analyze", "data": ... }`.
+
+## 3. Call it
+
+```bash
+curl -s -X POST localhost:8000/api/ -H 'content-type: application/json' \
+  -d '{"schema":"sentiment_analyze","data":{"text":"I love how fast it works!"}}'
+```
+
+```json
+{"label":"POSITIVE","score":3}
+```
+
+The Python worker started on the first call (a process that stays alive, so the next calls cost 0.07 ms of overhead, not the 17 ms of starting Python).
+
+## 4. Invalid input never reaches Python
+
+```bash
+curl -s -w "\nHTTP %{http_code}\n" -X POST localhost:8000/api/ -H 'content-type: application/json' \
+  -d '{"schema":"sentiment_analyze","data":{}}'
+```
+
+```
+[{"name":"text","error":"The text to read","path":"text"}]
+HTTP 400
+```
+
+Total.js validated the input against the contract, found that `text` was missing, and answered before Python ran. The message is the comment of the contract (`// The text to read`), so write it for the person who will read the error.
+
+## 5. The same function as a tool for an AI agent
+
+The file [config](../../examples/tutorials/01-python-action-and-mcp/config) has `$mcp : true`, which turns on the MCP endpoint of Total.js: `POST /$mcp/`, JSON-RPC over HTTP. An agent first asks which tools there are:
+
+```bash
+curl -s -X POST 'localhost:8000/$mcp/' -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+```json
+{"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","tools":[{"name":"sentiment_analyze","description":"Detects whether a text is positive, negative or neutral","inputSchema":{"type":"object","properties":{"input":{"type":"object","description":"Payload (request body) passed to this action.","properties":{"text":{"type":"string","description":"The text to read"}},"additionalProperties":false,"required":["text"]}},"required":["input"]},"outputSchema":{"type":"object","properties":{"label":{"type":"string"},"score":{"type":"number"}},"required":[]}}]}}
+```
+
+Everything an agent needs to use the function comes from the contract: the name, the description, the arguments and what it returns. You wrote none of it twice. Then it calls the tool:
+
+```bash
+curl -s -X POST 'localhost:8000/$mcp/' -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sentiment_analyze","arguments":{"input":{"text":"This is terrible and broken"}}}}'
+```
+
+```json
+{"jsonrpc":"2.0","id":2,"result":{"resultType":"complete","content":[{"type":"text","text":"{\"label\":\"NEGATIVE\",\"score\":-2}"}],"structuredContent":{"label":"NEGATIVE","score":-2}}}
+```
+
+With an invalid input the answer has `"isError": true`, and the validation message as its text.
+
+**About security.** The MCP endpoint has no authentication unless you add one (`Total.mcp.auth`). In this tutorial the application listens only on `127.0.0.1` ([index.js](../../examples/tutorials/01-python-action-and-mcp/index.js)), so only your machine can reach it. Do the same, or put authentication in front of it, before you expose it anywhere. See [Security](../security.md).
+
+This page calls the endpoint with `curl`. Pointing a specific AI client at it was not tried here.
+
+## 6. Change the function while it runs
+
+Open `python/sentiment.py` and add `'adore'` to `POSITIVE`. Do not restart anything. Ask for a text that uses it:
+
+```bash
+curl -s -X POST localhost:8000/api/ -H 'content-type: application/json' \
+  -d '{"schema":"sentiment_analyze","data":{"text":"I adore it"}}'
+```
+
+Before the edit the answer is `{"label":"NEUTRAL","score":0}`; a moment after saving it is `{"label":"POSITIVE","score":1}`. The application printed:
+
+```
+[totalfusion] python: sentiment.py changed, replacing 1 worker
+```
+
+That is `watch: DEBUG`: the new worker starts first and the old one leaves when it is idle, so no request is lost while you edit.
+
+## 7. Check the setup
+
+```bash
+npx totalfusion doctor --path python
+```
+
+```
+TotalFusion doctor: python
+
+[ok]    Interpreter  Python 3.15.0 (..., chosen by the default)
+[warn]  Environment  This is a Python of the system, not a virtual environment: the libraries you install are shared with everything else
+                     Fix: python3 -m venv .venv, install the libraries in it and set the venv option.
+[ok]    Components   1 module in .../python, 1 action (0 streaming)
+[ok]    Libraries    Everything the components import can be found
+
+Everything is in order (1 warning)
+```
+
+It reads the code without running it and tells you what is missing and how to fix it. The warning is advice: for a real project, use a virtual environment.
+
+## Check it yourself
+
+With the application running, in another terminal:
+
+```bash
+npm run verify
+```
+
+[verify.js](../../examples/tutorials/01-python-action-and-mcp/verify.js) makes every call of this page and compares the answers. It is the same check that the tests of the project run.
+
+## What you learned
+
+- A function with `@action(...)` is a contract that Total.js turns into an action, an API and, if you say `mcp=True`, a tool for agents.
+- Total.js validates the input before Python runs.
+- The Python worker stays alive between calls, and you can edit it while the application runs.
+
+## Next
+
+- Use a library with a real model: [Python](../python.md).
+- Send the output of a model as it is produced: [Streaming](../streaming.md).
+- Put the function in a flow: [Flow](../flow.md).
+- Every option of `register()`: [Total.js 5](../total5.md).
+
+---
+
+<!-- The code of third parties in the sandbox of WebAssembly: docs/tutorials/02-wasm-sandbox.md -->
+
+# 2. Run the code of third parties in the sandbox of WebAssembly
+
+You will build the core of a plugin system: each customer of your platform writes the rule that prices their orders, and your Total.js application **runs it without trusting it**. You will see a module that tries to read your files, see your environment, write to your disk and open a connection, and fail at every attempt. You will see another that never returns, and how the application cuts it off and goes on. It takes about fifteen minutes.
+
+The finished application is in [examples/tutorials/02-wasm-sandbox](../../examples/tutorials/02-wasm-sandbox), and a test of the project builds the modules and runs it on every change.
+
+## What you need
+
+- Node.js 20 or newer, and the repository with `npm install` done in the folder of the tutorial.
+- **Go 1.24 or newer, to build the modules.** Running them needs only Node.js: your customers could send you the `.wasm` file already built, from any language that makes WebAssembly. Only Go has an SDK in TotalFusion today.
+
+```bash
+cd examples/tutorials/02-wasm-sandbox
+npm install
+npm run build
+npm start
+```
+
+`npm run build` makes `plugins/rules.wasm` and `plugins/hostile.wasm`. Each is about 5 MB, because the runtime of Go goes inside.
+
+## 1. The rule of a customer
+
+[rules/main.go](../../examples/tutorials/02-wasm-sandbox/rules/main.go) is what a customer writes. It is a Go program with a function that prices an order:
+
+```go
+func init() {
+
+	app := totalfusion.New()
+
+	app.Function("discount.apply", func(call *totalfusion.Call) (any, error) {
+
+		price, okPrice := call.Args.Get("price").AsFloat()
+		quantity, okQuantity := call.Args.Get("quantity").AsFloat()
+
+		if !okPrice || !okQuantity || price < 0 || quantity < 1 {
+			return nil, totalfusion.Invalid("price and quantity must be numbers, and the quantity at least 1")
+		}
+
+		// 10% from 10 units, 20% from 50, and 5% more for a premium customer
+		...
+		return map[string]any{"subtotal": subtotal, "discount": discount, "total": subtotal * (1 - discount)}, nil
+
+	}).Summary("The price of an order, with the discount of this customer").Input("*price:Number\n*quantity:Number\ntier:String")
+
+	app.Wasm() // this app is the module
+}
+
+func main() {}
+```
+
+A module of this kind does not run `main`, so the functions are registered in `init`, and `app.Wasm()` says that this app is the module. The contract (`Summary`, `Input`...) works as in [Go](../go.md).
+
+## 2. Load the modules
+
+[definitions/plugins.js](../../examples/tutorials/02-wasm-sandbox/definitions/plugins.js) keeps one `Fusion` for each module:
+
+```js
+const { Fusion } = REQUIRE('totalfusion');
+
+const plugins = new Map();
+
+function load(name) {
+	plugins.set(name, new Fusion({ wasm: { module: PATH.root('plugins/' + name + '.wasm'), timeout: 1000, cancelGrace: 200 } }));
+}
+```
+
+A runtime of TotalFusion has one module, so a platform with many customers has one `Fusion` for each one, and each module runs in a worker of its own: a customer cannot see the memory of another. `timeout: 1000` is the longest time that a call may take, and `cancelGrace` how long the module has to stop before it is killed.
+
+Two routes use them. The first lists what each module offers, read **without running any function**; the second runs a function with the body of the request:
+
+```js
+ROUTE('GET /plugins/', list);
+ROUTE('POST /plugins/{name}/{module}/{fn}/', run);   // /plugins/rules/discount/apply/ is the function discount.apply
+```
+
+(The function is split in the route because a dot in a route looks like a file to Total.js.)
+
+```bash
+curl -s localhost:8000/plugins/
+```
+
+```json
+{"rules":[{"fn":"discount.apply","summary":"The price of an order, with the discount of this customer"}],"hostile":[{"fn":"steal.file","summary":"Tries to read a file of the machine"},{"fn":"steal.environment","summary":"Tries to read the environment of the process"},{"fn":"damage.write","summary":"Tries to write a file"},{"fn":"call.home","summary":"Tries to open a connection"},{"fn":"spin.forever","summary":"Never returns"}]}
+```
+
+## 3. Run the rule
+
+```bash
+curl -s -X POST localhost:8000/plugins/rules/discount/apply/ -H 'content-type: application/json' \
+  -d '{"price":100,"quantity":60,"tier":"premium"}'
+```
+
+```json
+{"discount":0.25,"subtotal":6000,"total":4500}
+```
+
+Sixty units get 20%, and a premium customer 5% more. With invalid input the function answers with its own error, and its name travels with it:
+
+```bash
+curl -s -w "\nHTTP %{http_code}\n" -X POST localhost:8000/plugins/rules/discount/apply/ \
+  -H 'content-type: application/json' -d '{"price":100}'
+```
+
+```
+[{"error":"REMOTE_ERROR: ValueError: price and quantity must be numbers, and the quantity at least 1"}]
+HTTP 400
+```
+
+## 4. A module that tries to get out
+
+[hostile/main.go](../../examples/tutorials/02-wasm-sandbox/hostile/main.go) is what a customer with bad intentions could send. Each of its functions does one thing that a sandbox does not allow. Try them:
+
+```bash
+# read a file of your machine
+curl -s -X POST localhost:8000/plugins/hostile/steal/file/ -H 'content-type: application/json' -d '{"path":"/etc/hosts"}'
+{"error":"open /etc/hosts: Invalid argument","read":false}
+
+# read your environment (your keys and tokens are there)
+curl -s -X POST localhost:8000/plugins/hostile/steal/environment/ -H 'content-type: application/json' -d '{}'
+{"home":"","path":"","variables":0}
+
+# write a file
+curl -s -X POST localhost:8000/plugins/hostile/damage/write/ -H 'content-type: application/json' -d '{"path":"/tmp/escaped"}'
+{"written":false}
+
+# open a connection
+curl -s -X POST localhost:8000/plugins/hostile/call/home/ -H 'content-type: application/json' -d '{}'
+{"connected":false}
+```
+
+The file `/tmp/escaped` was not created. The module has **no files, no environment and no connections**: it is given none of them, and it can import nothing but WASI, so there is nothing to ask for. Its own code ran normally, and what it tried failed inside the module.
+
+## 5. A module that never returns
+
+```bash
+curl -s -w "\nHTTP %{http_code}\n" -X POST localhost:8000/plugins/hostile/spin/forever/ -H 'content-type: application/json' -d '{}'
+```
+
+```
+[{"error":"TIMEOUT: The call to wasm \"spin.forever\" timed out after 1000 ms"}]
+HTTP 400
+```
+
+It answered after one second. The loop did not stop by itself: after the timeout and `cancelGrace` the worker was killed and replaced. The rest of the application did not notice, and neither did the other modules:
+
+```bash
+curl -s -X POST localhost:8000/plugins/rules/discount/apply/ -H 'content-type: application/json' -d '{"price":10,"quantity":10}'
+{"discount":0.1,"subtotal":100,"total":90}
+
+curl -s -X POST localhost:8000/plugins/hostile/steal/environment/ -H 'content-type: application/json' -d '{}'
+{"home":"","path":"","variables":0}
+```
+
+The call to the hostile module right after the kill took a quarter of a second, the time to start its new worker. It is the same mechanism that restarts a Python worker that dies.
+
+## 6. What the sandbox does not protect
+
+Say this to yourself before you trust it with something real:
+
+- **It is the sandbox of V8 and of WASI in Node.js, not a guarantee.** The process that runs the module has your permissions. If the engine had a flaw that lets a module escape, it would be as free as that process. For code you do not trust at all, add a container or a user without privileges. See [Security](../security.md).
+- **Time and random numbers are available**, so a module is not deterministic.
+- **Memory is not capped during one call.** `maxMemory` replaces the worker that went over after the call; a function that allocates without limit inside a call is stopped by the timeout, not by the memory.
+- **A worker runs one call at a time**, so a customer with heavy traffic needs more `workers`.
+
+## Check it yourself
+
+With the application running, in another terminal:
+
+```bash
+npm run verify
+```
+
+[verify.js](../../examples/tutorials/02-wasm-sandbox/verify.js) makes every call of this page, including the four attempts to get out and the timeout, and compares the answers.
+
+## What you learned
+
+- A WebAssembly module runs in its own worker, with no files, no environment and no connections.
+- You can load many, one `Fusion` for each, and read what they offer without running them.
+- A function that does not return is cut off by the timeout, and the application goes on.
+
+## Next
+
+- Everything about the modules and their ABI: [WebAssembly](../webassembly.md).
+- Report what happens to the workers: the [Events component of Flow](../flow.md#events).
+- The options that keep workers healthy: [Working with the workers](../workers.md).
+
+---
+
+<!-- Changelog: CHANGELOG.md -->
+
+# Changelog
+
+## 0.1.0
+
+The first version.
+
+- **Documentation:** a short README and a `docs/` folder with a guide, one page per runtime (Python, Rust and Go), use cases with their measured numbers, a reference and the security notes.
+- **Runtimes:** Python (3.9 or newer), Rust and Go (1.21 or newer), as pools of worker processes that Node.js supervises. They speak the same protocol (version 2), so every feature below works with all of them. The Go module is pure Go (no `cgo`), so a worker builds for any system from any system.
+- **Calls:** correlated by id, with timeouts, `AbortSignal` cancellation, a bounded queue, and real tracebacks (Python) or errors with a name and a code (Rust and Go) in the JavaScript error. A call is never retried by itself: it may have had side effects.
+- **Contracts:** `@action(...)` in Python, `.summary().input().output()...` in Rust and `.Summary().Input().Output()...` in Go declare what a function takes and returns, in the schema syntax of Total.js. They are read without running any code.
+- **WebAssembly:** a module (`.wasm`, a WASI reactor that exports a small ABI) runs in a sandbox in a process of its own: no files, no network, no environment, only WASI as imports, a trap or an exit fails the call and starts a new instance. The Go SDK (`app.Wasm()`, Go 1.24 or newer) builds one; the ABI is documented for other languages. Streams and concurrency inside a worker are not supported.
+- **Total.js 5:** `fusion.register()` turns the functions that declare a contract into `NEWACTION()`s, with `input`, `query`, `params` and access options (`permissions`, `user`, `sa`, `su`) validated by the framework, and into MCP tools when the function says `mcp`. Server-Sent Events (`fusion.sse`) are included.
+- **Flow:** seven components for Total.js Flow (group *TotalFusion*): one for each runtime that calls a function with the data of each message, **Stream** (every chunk is a message, with `Stop` and cancellation when the flow stops), **Events** (the events of the workers as messages) and **Stats**. A list for the catalog of the designer (`total5/flow/db.json`) and `fusion.flow()` for the logic. They were run in the designer of Flow 11.1.
+- **Tutorials:** step by step pages (`docs/tutorials`), each with an application in `examples/tutorials` that a test of the project starts and checks on every change. The first one: a Python function as an API and as a tool for an AI agent, with live reload. The second: the code of third parties in the sandbox of WebAssembly, with a module that tries to get out and one that never returns.
+- **For agents and models:** `AGENTS.md` (also in the package) says how to use TotalFusion in an application and how to work on the repository; `CLAUDE.md`, `GEMINI.md` and the instructions of Copilot lead to it; three skills for Claude Code (`.claude/skills`); `llms.txt` and `llms-full.txt` built from the documentation; JSON Schemas of the configuration and of the contracts (`schemas/`); and `docs/ai.md`. A test keeps them true.
+- **Binary data** without base64: `Buffer` and typed arrays travel as raw bytes in both directions (NumPy arrays included). A 100 MB buffer makes the round trip in 43 ms.
+- **Streaming:** generators in Python and stream functions in Rust and Go become async iterables, with backpressure and cancellation.
+- **Several calls at the same time** in a worker (`concurrency`), for async functions in Python for the threads of a Rust worker and for the goroutines of a Go one.
+- **Keeping workers healthy:** recycling by number of calls and by memory with no call lost (the replacement starts first), a health check of the idle workers, `warmup`, `preload` and `@startup`/`@shutdown` hooks.
+- **Events:** `fusion` is an `EventEmitter` that reports when workers are ready, end, are replaced or stop answering, when a call is repeated and when the code is reloaded.
+- **Retrying:** a call that is declared idempotent (`{ idempotent: true }`, `@action(idempotent=True)` or `.idempotent(true)` in Rust, `.Idempotent(true)` in Go) is repeated on another worker if its worker dies. Nothing is repeated otherwise.
+- **Rust and Go on Windows:** the worker runs from a copy, so `cargo build` or `go build` can replace the binary while it is in use and the reload picks the new build up (`shadowCopy`).
+- **Fresh code:** the components of a Python worker are loaded from their source every time, never from bytecode (a file saved twice within a second with the same size is never missed), and no `__pycache__` is left next to them.
+- **Development:** `fusion.watch()` replaces the workers when the code changes, and with Total.js the contracts are read again.
+- **Diagnosis:** `fusion.doctor()` and `npx totalfusion doctor` check the interpreter (or the Rust or Go binary), the components, the libraries and `requirements.txt` without importing or installing anything, and the errors at run time say how to install a missing library.
+
+Verified in GitHub Actions on Linux (Ubuntu with Node.js 20, 22 and 24 and Python 3.9 to 3.14), macOS and Windows: the whole suite, with the Python, Rust, Go and WebAssembly workers and the components for Flow. Also locally on macOS (Apple silicon) with Node.js 20, 22, 24 and 26, Python 3.9 to 3.15, Rust 1.99 and Go 1.21 and 1.27, and by hand in the designer of Flow 11.1. Not verified: a specific AI client against the MCP endpoint, and Flow in the cloud service of Total.js.
+
+---
+
+<!-- Contributing: CONTRIBUTING.md -->
+
+# Contributing
+
+The conventions and the lessons of the project, written for AI coding agents and useful to anyone, are in [AGENTS.md](AGENTS.md).
+
+## Running the tests
+
+```bash
+npm test                                          # needs Node.js 20 or newer and Python 3.9 or newer
+cargo test --manifest-path rust/Cargo.toml        # the crate
+(cd go && go test -race ./...)                    # the Go module
+```
+
+- Rust: if `cargo` is found, `npm test` builds the worker in `tests/rust` and runs its tests; without it they are not run.
+- Go: if `go` is found (or `GO=/path/to/go`), `npm test` builds the worker in `tests/go` and runs its tests; without it they are not run. The Go module needs Go 1.21 or newer.
+- WebAssembly: `npm test` builds the module of `tests/wasm` for `GOOS=wasip1`, which needs Go 1.24 or newer (the first with `//go:wasmexport`); without it those tests are not run. The host (`wasm/host.js`) needs the `node:wasi` of Node.js.
+- Total.js 5: the integration tests look in `TOTAL5_PATH`, in the `total5` package and in a sibling `../framework5`; without it they are skipped.
+- `TOTALFUSION_PYTHON=/path/to/python npm test` runs the suite with another Python. `TOTALFUSION_TEST_NUMPY=/path/to/python` enables the NumPy tests.
+
+Run the tests with `PYTHONDONTWRITEBYTECODE` **unset** as well (`env -u PYTHONDONTWRITEBYTECODE npm test`): some environments set it, and then Python never writes the bytecode that every CI runner does write. A bug of that kind hid from us for a long time.
+
+To enable NumPy locally, create a virtual environment and run:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r examples/totaljs-numerics/requirements.txt
+TOTALFUSION_TEST_NUMPY="$PWD/.venv/bin/python" npm test
+```
+
+CI installs NumPy for each Python version and enables these tests too.
+
+The documentation is tested too (`tests/docs.test.js` checks that every link and anchor leads somewhere and that every page is reachable from `docs/README.md`), so change it together with the code.
+
+After a change in a component of Flow (`total5/flow/*.html`) run `node scripts/flow-db.js --write` to update `total5/flow/db.json`; a test fails if it is out of date. The icons have to be in the icon font of Flow, not any icon of Tabler.
+
+A tutorial is a page in `docs/tutorials` and an application in `examples/tutorials` with the same name and a `verify.js` that checks what the page says; `tests/tutorials.test.js` starts it for real. Write the commands and the answers of the page from what the application printed, not from memory.
+
+A change should come with tests. When you fix something, check that the test fails without the fix.
+
+## How it is organised
+
+| | |
+|---|---|
+| `index.js`, `lib/` | The engine: the pool of workers, the protocol (`lib/protocol.js`), streams, the doctor and the watcher. It knows nothing about a language. |
+| `python/` | The Python adapter and its worker (`worker.py`, standard library only) and SDK (`sdk/totalfusion.py`). |
+| `rust/` | The Rust adapter (`index.js`) and the `totalfusion` crate (`src/`). |
+| `go/` | The Go adapter (`index.js`) and the `totalfusion` module (`*.go`). |
+| `wasm/` | The WebAssembly adapter (`index.js`) and the host process that runs a module in a sandbox (`host.js`). The SDK of Go for it is `go/wasm*.go`. |
+| `total5/` | The integration with Total.js 5: actions, MCP, Server-Sent Events and the components of Flow (`flow/*.html`, with their logic in `flow.js`). |
+| `tests/` | The tests, and the components and workers they run. |
+
+## Adding a runtime
+
+A runtime is an adapter plus a worker that speaks the protocol of `lib/protocol.js` over its standard input and output (`ready`, `call`, `chunk`, `res`, `credit`, `cancel`, `ping`/`pong`, `bye`). The adapter exports `create(config)` (returns a `Pool`), `describe(config)`, `doctor(config)` and `watchTarget(config)`, and is added to `ADAPTERS` in `index.js`. The Rust and the Go adapters are the shortest examples. A worker must answer a `pong` with its memory and must not use its standard output for anything else.
+
+## Style
+
+Plain JavaScript in the style of Total.js: tabs, `'use strict'`, no dependencies, no TypeScript. Rust follows `rustfmt` and Go follows `gofmt`. Keep the documentation honest: say what was measured and where, and what was not verified.

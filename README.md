@@ -81,6 +81,7 @@ Once published it will be `npm install totalfusion`. It needs Node.js 20 or newe
 | [Working with the workers](docs/workers.md) | Concurrency, recycling, health check, events, retrying. |
 | [Errors and cancellation](docs/errors.md) | The error codes. |
 | [Development and diagnosis](docs/development.md) | Reload on change and the `doctor`. |
+| [AI assistants](docs/ai.md) | `AGENTS.md`, `llms.txt`, the schemas and your functions as tools for agents. |
 | [How it works](docs/how-it-works.md) | The pool, the workers and the protocol. |
 | [Security](docs/security.md) | What it protects and what it does not. |
 | [Reference](docs/reference.md) | Every option, method and command. |
@@ -123,7 +124,7 @@ Not verified: connecting a specific AI client to the MCP endpoint, and the compo
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the tests and how the project is organised, and [CHANGELOG.md](CHANGELOG.md) for what each version contains.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the tests and how the project is organised, and [CHANGELOG.md](CHANGELOG.md) for what each version contains. **AI coding agents:** [AGENTS.md](AGENTS.md) says how to use TotalFusion in an application and how to work on this repository; it is also in the package.
 
 ## Credits
 
