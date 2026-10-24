@@ -28,7 +28,8 @@ async function events(path, stopAfter) {
 		for await (const part of res.body) {
 			rest += decoder.decode(part, { stream: true });
 			let index;
-			while ((index = rest.indexOf('\n\n')) !== -1) {
+			// several events can arrive in one piece of the network: the browser leaves after exactly `stopAfter` of them
+			while ((!stopAfter || got.length < stopAfter) && (index = rest.indexOf('\n\n')) !== -1) {
 				got.push({ at: Date.now() - started, text: rest.slice(0, index) });
 				rest = rest.slice(index + 2);
 			}

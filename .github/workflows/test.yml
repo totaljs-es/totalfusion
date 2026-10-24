@@ -128,7 +128,7 @@ jobs:
           echo "=== the first error messages ==="
           grep -n -E "AssertionError|Error \[|Error:|ENOENT|EACCES|timed out" test.log | head -40 || true
           echo "=== the assertion that failed (message, expected, actual) ==="
-          grep -n -B14 -A22 -E "name: 'AssertionError'" test.log | head -120 || true
+          grep -n -B14 -A22 -E "name: 'AssertionError'|AssertionError \[" test.log | head -160 || true
           echo "=== what the workers said before they stopped (the lines after the error) ==="
           grep -n -A6 -E "worker stopped during the call" test.log | head -60 || true
 
