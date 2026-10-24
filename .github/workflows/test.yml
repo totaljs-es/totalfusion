@@ -9,8 +9,57 @@ on:
   workflow_call:
 
 jobs:
+  # A change that only touches documentation does not need the eight systems: the checks of the texts are enough.
+  # Anything that is not a push or a pull request (the release that publishes to npm) always runs everything.
+  scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: diff
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          code=true
+          if [ "$EVENT" = push ] || [ "$EVENT" = pull_request ]; then
+            if files=$(git diff --name-only "$BASE" HEAD 2>/dev/null) && [ -n "$files" ]; then
+              echo "$files"
+              if ! echo "$files" | grep -v -E '^(docs/.*|.*\.md|llms(-full)?\.txt|LICENSE)$' | grep -q .; then
+                code=false
+              fi
+            fi
+          fi
+          echo "Run the whole matrix: $code"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+  # Only documentation changed: the tests of the texts (links, anchors, files for agents, what is said about npm)
+  docs:
+    needs: scope
+    if: needs.scope.outputs.code == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - run: npm run check
+
+      - run: node --test tests/release.test.js
+
   test:
     name: ${{ matrix.os }} / node ${{ matrix.node }} / python ${{ matrix.python }}
+    needs: scope
+    if: needs.scope.outputs.code == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:

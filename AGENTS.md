@@ -51,7 +51,7 @@ Each area (`go/`, `rust/`, `python/`, `wasm/`, `total5/`, `tests/`) has its own 
 - For Codex: this file is the native entry point; no separate Codex instructions file is needed. Start the chat in the TotalFusion repository so instructions and repo-local skills are discovered. The four entries in `.agents/skills/` reuse the shared checklists in `.claude/skills/`; read their linked checklist when a workflow applies. See `docs/ai.md`.
 - For agents: this file, `CLAUDE.md` and `GEMINI.md` (they import it), `.github/copilot-instructions.md`, `.claude/skills/` (four checklists: add a function, diagnose a worker, add a tutorial, verify a change) and `.claude/settings.json` (the commands that are safe to run without asking), `schemas/` and `llms.txt`.
 - `tests/` has the tests and the workers they run (`tests/go`, `tests/rust`, `tests/wasm`, `tests/components`). `examples/` has the examples (`examples/README.md` lists them, and `tests/examples.test.js` runs them) and the applications of the tutorials (`examples/tutorials`). `docs/` is the documentation, and it is tested.
-- `.github/workflows/test.yml` runs the suite on Linux (Node.js 20, 22, 24), macOS and Windows.
+- `.github/workflows/test.yml` runs the suite on Linux (Node.js 20, 22, 24), macOS and Windows. A change that only touches documentation (`docs/`, `*.md`, `llms*.txt`) runs only the checks of the texts; a release always runs everything.
 
 ## Commands
 
