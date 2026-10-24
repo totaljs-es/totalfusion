@@ -1,5 +1,8 @@
 'use strict';
 
+// the version of the package, with its dots escaped for a regular expression
+const version = require('../package.json').version.replace(/\./g, '\\.');
+
 const { test, describe, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const Path = require('path');
@@ -455,7 +458,7 @@ describe('doctor', function() {
 		assert.equal(find(report, 'Module', 'ok').length, 1);
 		assert.equal(find(report, 'Imports', 'ok').length, 1);
 		assert.match(find(report, 'Imports', 'ok')[0].message, /WASI \(no files, no network, no environment\)/);
-		assert.match(find(report, 'Functions', 'ok')[0].message, /\d+ functions, SDK 0\.1\.0, protocol 2/);
+		assert.match(find(report, 'Functions', 'ok')[0].message, new RegExp('\\d+ functions, SDK ' + version + ', protocol 2'));
 	});
 
 	test('a module that is not configured or does not exist says how to build it', async function() {

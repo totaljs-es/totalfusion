@@ -1,5 +1,8 @@
 'use strict';
 
+// the version of the package, with its dots escaped for a regular expression
+const version = require('../package.json').version.replace(/\./g, '\\.');
+
 const { test, describe, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const Path = require('path');
@@ -471,7 +474,7 @@ describe('doctor', { skip }, function() {
 		const report = await create().doctor('rust');
 		assert.equal(report.ok, true, report.text);
 		assert.equal(find(report, 'Binary', 'ok').length, 1);
-		assert.match(find(report, 'Functions', 'ok')[0].message, /\d+ functions \(\d+ streaming\), totalfusion crate 0\.1\.0, protocol 2/);
+		assert.match(find(report, 'Functions', 'ok')[0].message, new RegExp('\\d+ functions \\(\\d+ streaming\\), totalfusion crate ' + version + ', protocol 2'));
 	});
 
 	test('a worker that is not configured or does not exist says how to build it', async function() {
