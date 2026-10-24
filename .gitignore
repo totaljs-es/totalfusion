@@ -161,6 +161,7 @@ rust/Cargo.lock
 
 # WebAssembly build output of the examples
 /examples/wasm/module.wasm
+/examples/tutorials/*/plugins/
 
 # Python bytecode, written next to the code when it runs
 __pycache__/

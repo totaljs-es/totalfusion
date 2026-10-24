@@ -1,0 +1,16 @@
+{
+	"name": "totalfusion-tutorial-02",
+	"private": true,
+	"description": "Tutorial 2: run the code of third parties in the sandbox of WebAssembly",
+	"scripts": {
+		"build": "npm run build:rules && npm run build:hostile",
+		"build:rules": "cd rules && GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o ../plugins/rules.wasm .",
+		"build:hostile": "cd hostile && GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o ../plugins/hostile.wasm .",
+		"start": "node index.js",
+		"verify": "node verify.js"
+	},
+	"dependencies": {
+		"total5": "latest",
+		"totalfusion": "file:../../.."
+	}
+}

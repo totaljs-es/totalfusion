@@ -47,4 +47,7 @@ module.exports = function() {
 	return built = file;
 };
 
+// The command of Go that can build it, or null
+module.exports.command = go;
+
 module.exports.skip = () => module.exports() ? false : 'Go 1.24 or newer is not installed (it is needed to build the WebAssembly module of the tests)';

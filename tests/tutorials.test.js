@@ -9,8 +9,9 @@ const Path = require('path');
 const Fs = require('fs');
 const Os = require('os');
 const Net = require('net');
-const { spawn, spawnSync } = require('child_process');
+const { spawn, spawnSync, execFileSync } = require('child_process');
 const total5 = require('./locate-total5')();
+const wasm = require('./wasm-build');
 
 const ROOT = Path.join(__dirname, '..');
 const TUTORIALS = Path.join(ROOT, 'examples', 'tutorials');
@@ -32,6 +33,12 @@ function copy(name) {
 
 	const directory = Fs.mkdtempSync(Path.join(Os.tmpdir(), 'totalfusion-tutorial-'));
 	Fs.cpSync(Path.join(TUTORIALS, name), directory, { recursive: true, filter: file => !file.includes('node_modules') });
+	// The modules in Go point to the SDK with a path from their place in the repository: in the copy it is the one of the repository
+	for (const file of Fs.readdirSync(directory, { recursive: true }).filter(file => /(^|[\\/])go\.mod$/.test(file))) {
+		const path = Path.join(directory, file);
+		Fs.writeFileSync(path, Fs.readFileSync(path, 'utf8').replace('../../../../go', Path.join(ROOT, 'go').replace(/\\/g, '/')));
+	}
+
 	Fs.mkdirSync(Path.join(directory, 'node_modules'));
 
 	const type = process.platform === 'win32' ? 'junction' : 'dir';
@@ -39,6 +46,14 @@ function copy(name) {
 	Fs.symlinkSync(ROOT, Path.join(directory, 'node_modules', 'totalfusion'), type);
 
 	return directory;
+}
+
+// Builds the modules for WebAssembly that the tutorial needs (what `npm run build` of the tutorial does)
+function build(directory, modules) {
+	for (const name of modules) {
+		Fs.mkdirSync(Path.join(directory, 'plugins'), { recursive: true });
+		execFileSync(wasm.command(), ['build', '-buildmode=c-shared', '-o', Path.join(directory, 'plugins', name + '.wasm'), '.'], { cwd: Path.join(directory, name), stdio: 'pipe', timeout: 600000, env: Object.assign({}, process.env, { GOOS: 'wasip1', GOARCH: 'wasm' }) });
+	}
 }
 
 // Starts the application. The channel of messages makes Total.js run it directly, without the watcher of the debug mode.
@@ -83,6 +98,19 @@ describe('every tutorial has its page and its application', function() {
 
 		for (const name of applications)
 			assert.ok(Fs.existsSync(Path.join(TUTORIALS, name, 'verify.js')), name + ' has no verify.js');
+	});
+
+});
+
+describe('02 the code of third parties in the sandbox of WebAssembly', { skip: skip || wasm.skip() }, function() {
+
+	test('the application does what the tutorial says', async function() {
+
+		const directory = copy('02-wasm-sandbox');
+		build(directory, ['rules', 'hostile']);
+
+		const item = await start(directory);
+		assert.match(verify(item), /Verified: the rule, the errors, the sandbox and the timeout/);
 	});
 
 });
