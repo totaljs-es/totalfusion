@@ -81,7 +81,7 @@ What it does not do, so you do not count on it:
 - **Binary data** travels as in every runtime, without base64: a 20 MB buffer reaches the module in 10 ms (measured).
 - **Reload:** `fusion.watch('wasm')` replaces the workers when the `.wasm` file is built again.
 - **Contracts** are declared with the same methods as in Go (`Summary`, `Input`, `Output`, `MCP`...). A module that does not export `tf_describe` can still be called from JavaScript, but none of its functions becomes an action.
-- **Requirements:** the host uses `node:wasi`. It was tested with Node.js 26; Node.js 20, 22 and 24 are in the continuous integration of the project, and have not run it yet.
+- **Requirements:** the host uses `node:wasi`. The tests run with Node.js 20, 22 and 24 in the continuous integration of the project, and with Node.js 26 locally.
 
 ## Measured
 

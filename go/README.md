@@ -134,4 +134,4 @@ Windows does not let anything overwrite an executable that is running, so on Win
 
 ## Requirements
 
-Go 1.21 or newer. Standard library only. Tested on macOS (Apple silicon) with Go 1.21 and 1.27.
+Go 1.21 or newer. Standard library only. Tested with Go 1.21 and 1.27 on macOS (Apple silicon), and in the continuous integration on Linux, macOS and Windows.

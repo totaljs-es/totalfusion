@@ -61,4 +61,4 @@ Windows does not let anything overwrite an executable that is running, so on Win
 
 ## Requirements
 
-Rust 2021 edition. The only dependency is `serde_json`. Tested with Rust 1.99 on macOS (Apple silicon).
+Rust 2021 edition. The only dependency is `serde_json`. Tested with Rust 1.99 on macOS (Apple silicon), and in the continuous integration on Linux, macOS and Windows.

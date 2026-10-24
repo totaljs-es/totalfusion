@@ -104,21 +104,22 @@ All of them run from a clone of the repository:
 
 ## Status
 
-Version 0.1.0, not published. The test suite **passed in GitHub Actions on Linux, macOS and Windows** before Go was added. With Go and WebAssembly it has more than 360 tests (62 of them for Go and 50 for WebAssembly) and it was run locally on macOS only; the workflow that runs it on the three systems has not run yet:
+Version 0.1.0, not published. The whole test suite (more than 410 tests: Python, Rust, Go, WebAssembly and the components for Flow) **passes in GitHub Actions on Linux, macOS and Windows**, and it was run locally on macOS as well:
 
 | | Where it has run |
 |---|---|
 | Linux | GitHub Actions on Ubuntu: Node.js 20, 22 and 24 with Python 3.9 to 3.14 |
 | macOS | GitHub Actions (Node.js 24, Python 3.12) and locally on Apple silicon (Node.js 20, 22 and 24, Python 3.9 to 3.15) |
-| Windows | GitHub Actions (Node.js 24, Python 3.12), before Go was added: the whole suite, including the binary pipes, the memory of a worker and the Rust workers |
+| Windows | GitHub Actions (Node.js 24, Python 3.12): the whole suite, including the binary pipes, the memory of a worker and the Rust, Go and WebAssembly workers |
 | Rust | The stable toolchain of the runners, and 1.99 locally (the `totalfusion` crate and its worker) |
-| Go | Locally on macOS (Apple silicon) with Go 1.21 and 1.27: the module (with the race detector) and the 62 tests of its worker. The module also compiles and passes `go vet` for Linux, Windows and FreeBSD from macOS, but it has not run on them |
-| WebAssembly | Locally on macOS (Apple silicon) with Node.js 26 and Go 1.27: the 50 tests of the module, including a module that tries to get out. Not run in GitHub Actions yet, and not tried with Node.js 20, 22 and 24 |
+| Go | The stable toolchain of the runners on the three systems, and locally with Go 1.21 and 1.27 (the module with the race detector, and the 62 tests of its worker) |
+| WebAssembly | GitHub Actions on the three systems (Node.js 20, 22 and 24 on Linux), and locally with Node.js 26: the 50 tests of the module, including a module that tries to get out |
+| Flow | The test harness of Total.js on the three systems, and by hand in the designer of Flow 11.1 on macOS |
 | Total.js | `total5` from npm in GitHub Actions, and also the 0.0.20 development version locally |
 
 Python 3.15 and the combinations that are not in the matrix of [.github/workflows/test.yml](.github/workflows/test.yml) were run only locally.
 
-Not verified: Go and WebAssembly on Linux and Windows, and the components for Flow on Windows and Linux (they were run in the designer of Flow 11.1 on macOS).
+Not verified: connecting a specific AI client to the MCP endpoint, and the components for Flow in the cloud service of Total.js.
 
 ## Contributing
 
