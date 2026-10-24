@@ -3,7 +3,8 @@
 <p align="center">
   <a href="docs/python.md"><img src="docs/assets/python.svg" alt="Python" height="56"></a>&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="docs/rust.md"><img src="docs/assets/rust.svg" alt="Rust" height="56"></a>&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="docs/go.md"><img src="docs/assets/go.svg" alt="Go" height="56"></a>
+  <a href="docs/go.md"><img src="docs/assets/go.svg" alt="Go" height="56"></a>&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="docs/webassembly.md"><img src="docs/assets/webassembly.svg" alt="WebAssembly" height="56"></a>
 </p>
 
 <p align="center"><sub>Python, Rust, Go and WebAssembly &middot; for Total.js and Node.js</sub></p>
@@ -123,7 +124,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the tests and how the proj
 
 ## Credits
 
-The logos of Python, Rust and Go in the header come from [Simple Icons](https://simpleicons.org) (version 16.35.0, CC0) and only identify the languages. Python is a trademark of the Python Software Foundation, Rust of the Rust Foundation and Go of Google. TotalFusion is not affiliated with or endorsed by any of them. The files are in [docs/assets](docs/assets) and can be replaced by other versions of the logos.
+The logos of Python, Rust, Go and WebAssembly in the header come from [Simple Icons](https://simpleicons.org) (version 16.35.0, CC0) and only identify the languages and the technology. Python is a trademark of the Python Software Foundation, Rust of the Rust Foundation and Go of Google, and WebAssembly is a standard of the W3C. TotalFusion is not affiliated with or endorsed by any of them. The files are in [docs/assets](docs/assets) and can be replaced by other versions of the logos.
 
 ## License
 
