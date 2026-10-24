@@ -27,13 +27,13 @@ jobs:
           - { os: macos-latest, node: 24, python: '3.12' }
           - { os: windows-latest, node: 24, python: '3.12' }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
 
@@ -48,7 +48,7 @@ jobs:
       - run: cargo test --manifest-path rust/Cargo.toml
 
       # The module of the Go workers. The tests below build the Go worker of the tests with the same toolchain.
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: stable
           cache: false
@@ -81,7 +81,7 @@ jobs:
 
       - name: Keep the log
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-log-${{ matrix.os }}-node${{ matrix.node }}-python${{ matrix.python }}
           path: test.log
