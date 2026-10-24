@@ -10,6 +10,12 @@ import (
 
 var setStdHandle = kernel32.NewProc("SetStdHandle")
 
+// The file that Go made for the standard output when the program started. It owns the handle of the pipe of the protocol, and it is
+// kept here for as long as the program runs: if nothing referred to it any more, the garbage collector would run its finalizer,
+// which closes the handle, and the protocol would write to a handle that is not valid ("write protocol: The handle is invalid")
+// as soon as the program had allocated enough for the collector to run.
+var protocolFile *os.File
+
 // On Windows the handle of the standard output is taken for the protocol, and the standard output of the process is pointed
 // to the error output, so what prints (fmt.Println, a library) goes there and never breaks a frame.
 func protocolOutput() io.Writer {
@@ -29,6 +35,9 @@ func protocolOutput() io.Writer {
 		return os.Stdout
 	}
 
+	// The same file, not another one for the same handle: two files with one handle close it twice, or when the first is collected
+	protocolFile = os.Stdout
 	os.Stdout = os.Stderr
-	return os.NewFile(uintptr(protocol), "protocol")
+
+	return protocolFile
 }
