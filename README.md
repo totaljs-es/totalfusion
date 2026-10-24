@@ -73,6 +73,7 @@ Once published it will be `npm install totalfusion`. It needs Node.js 20 or newe
 | | |
 |---|---|
 | [Getting started](docs/getting-started.md) | Install it, call your first function, make it an action. |
+| [Tutorials](docs/tutorials/README.md) | Step by step, each with an application that is tested on every change. |
 | [Use cases](docs/use-cases.md) | What it is good for, with the numbers that were measured. |
 | [Python](docs/python.md) · [Rust](docs/rust.md) · [Go](docs/go.md) | One page per runtime. |
 | [Total.js 5](docs/total5.md) · [Flow](docs/flow.md) | Actions, validation, permissions, MCP, SSE. The components for Flow. |

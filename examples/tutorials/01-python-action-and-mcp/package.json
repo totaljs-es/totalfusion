@@ -1,0 +1,13 @@
+{
+	"name": "totalfusion-tutorial-01",
+	"private": true,
+	"description": "Tutorial 1: a Python function as an API and as a tool for an AI agent",
+	"scripts": {
+		"start": "node index.js",
+		"verify": "node verify.js"
+	},
+	"dependencies": {
+		"total5": "latest",
+		"totalfusion": "file:../../.."
+	}
+}

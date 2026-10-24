@@ -7,6 +7,7 @@ TotalFusion extends Total.js with other runtimes. These pages explain how to use
 | | |
 |---|---|
 | [Getting started](getting-started.md) | Install it, call your first function, and make it an action of Total.js. |
+| [Tutorials](tutorials/README.md) | Step by step, with an application that is tested on every change. |
 | [Use cases](use-cases.md) | What it is good for, with the numbers that were measured. |
 | [How it works](how-it-works.md) | The pool, the workers and the protocol. |
 

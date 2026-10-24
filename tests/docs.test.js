@@ -12,7 +12,8 @@ const DOCS = Path.join(ROOT, 'docs');
 
 const PAGES = [
 	'README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', Path.join('rust', 'README.md'), Path.join('go', 'README.md'), Path.join('examples', 'totaljs-app', 'README.md'), Path.join('examples', 'totaljs-numerics', 'README.md'),
-	...Fs.readdirSync(DOCS).filter(name => name.endsWith('.md')).map(name => Path.join('docs', name))
+	...Fs.readdirSync(DOCS).filter(name => name.endsWith('.md')).map(name => Path.join('docs', name)),
+	...Fs.readdirSync(Path.join(DOCS, 'tutorials')).filter(name => name.endsWith('.md')).map(name => Path.join('docs', 'tutorials', name))
 ];
 
 // The text of a page without its code blocks

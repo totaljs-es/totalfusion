@@ -1,0 +1,5 @@
+name : TotalFusion tutorial 1
+
+# The MCP endpoint (POST /$mcp/) lets AI agents call the actions that say mcp=True.
+# It has no authentication unless you add one (Total.mcp.auth): here the application listens only on this machine.
+$mcp : true

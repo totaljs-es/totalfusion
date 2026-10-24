@@ -30,6 +30,8 @@ The documentation is tested too (`tests/docs.test.js` checks that every link and
 
 After a change in a component of Flow (`total5/flow/*.html`) run `node scripts/flow-db.js --write` to update `total5/flow/db.json`; a test fails if it is out of date. The icons have to be in the icon font of Flow, not any icon of Tabler.
 
+A tutorial is a page in `docs/tutorials` and an application in `examples/tutorials` with the same name and a `verify.js` that checks what the page says; `tests/tutorials.test.js` starts it for real. Write the commands and the answers of the page from what the application printed, not from memory.
+
 A change should come with tests. When you fix something, check that the test fails without the fix.
 
 ## How it is organised
