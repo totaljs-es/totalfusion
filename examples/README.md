@@ -1,6 +1,6 @@
 # Examples
 
-Every example runs from a clone of the repository. The ones in the first table are scripts for Node.js; the ones in the second are applications of Total.js 5. Start with `basic.js`, or with the [tutorials](../docs/tutorials/README.md), which go step by step.
+Every example runs from a clone of the repository (in your own application you install the package with `npm install totalfusion`). The ones in the first table are scripts for Node.js; the ones in the second are applications of Total.js 5. Start with `basic.js`, or with the [tutorials](../docs/tutorials/README.md), which go step by step.
 
 ## Scripts for Node.js
 

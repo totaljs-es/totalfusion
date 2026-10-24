@@ -9,9 +9,9 @@
 
 <p align="center"><sub>Python, Rust, Go and WebAssembly &middot; for Total.js and Node.js</sub></p>
 
-<p align="center"><a href="https://github.com/totaljs-es/totalfusion/actions/workflows/test.yml"><img src="https://github.com/totaljs-es/totalfusion/actions/workflows/test.yml/badge.svg" alt="Tests on Linux, macOS and Windows"></a></p>
+<p align="center"><a href="https://www.npmjs.com/package/totalfusion"><img src="https://img.shields.io/npm/v/totalfusion" alt="npm version"></a> <a href="https://github.com/totaljs-es/totalfusion/actions/workflows/test.yml"><img src="https://github.com/totaljs-es/totalfusion/actions/workflows/test.yml/badge.svg" alt="Tests on Linux, macOS and Windows"></a></p>
 
-**Extends Total.js with other runtimes.** Call functions written in Python, Rust and Go from Total.js and Node.js as plain `async` functions, and use them as Actions, API endpoints and MCP tools for AI agents, without leaving JavaScript. WebAssembly modules run in a sandbox.
+**Extends Total.js with other runtimes.** Call functions written in Python, Rust, Go and WebAssembly from Total.js and Node.js as plain `async` functions, and use them as Actions, API endpoints and MCP tools for AI agents, without leaving JavaScript. WebAssembly modules run in a sandbox.
 
 ```python
 # python/sentiment.py
@@ -65,6 +65,8 @@ A process per call costs about 17.6 ms to start. A worker that is already runnin
 ```bash
 npm install totalfusion
 ```
+
+The package is on [npm](https://www.npmjs.com/package/totalfusion).
 
 It needs Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. Rust and Go are needed only to build a worker in that language. **TotalFusion never installs, downloads or compiles anything for you.** → [Getting started](docs/getting-started.md)
 

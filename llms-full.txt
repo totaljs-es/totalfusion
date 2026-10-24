@@ -19,9 +19,9 @@ Node.js 20 or newer, no dependencies, plain JavaScript (no TypeScript). Version 
 
 <p align="center"><sub>Python, Rust, Go and WebAssembly &middot; for Total.js and Node.js</sub></p>
 
-<p align="center"><a href="https://github.com/totaljs-es/totalfusion/actions/workflows/test.yml"><img src="https://github.com/totaljs-es/totalfusion/actions/workflows/test.yml/badge.svg" alt="Tests on Linux, macOS and Windows"></a></p>
+<p align="center"><a href="https://www.npmjs.com/package/totalfusion"><img src="https://img.shields.io/npm/v/totalfusion" alt="npm version"></a> <a href="https://github.com/totaljs-es/totalfusion/actions/workflows/test.yml"><img src="https://github.com/totaljs-es/totalfusion/actions/workflows/test.yml/badge.svg" alt="Tests on Linux, macOS and Windows"></a></p>
 
-**Extends Total.js with other runtimes.** Call functions written in Python, Rust and Go from Total.js and Node.js as plain `async` functions, and use them as Actions, API endpoints and MCP tools for AI agents, without leaving JavaScript. WebAssembly modules run in a sandbox.
+**Extends Total.js with other runtimes.** Call functions written in Python, Rust, Go and WebAssembly from Total.js and Node.js as plain `async` functions, and use them as Actions, API endpoints and MCP tools for AI agents, without leaving JavaScript. WebAssembly modules run in a sandbox.
 
 ```python
 # python/sentiment.py
@@ -75,6 +75,8 @@ A process per call costs about 17.6 ms to start. A worker that is already runnin
 ```bash
 npm install totalfusion
 ```
+
+The package is on [npm](https://www.npmjs.com/package/totalfusion).
 
 It needs Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. Rust and Go are needed only to build a worker in that language. **TotalFusion never installs, downloads or compiles anything for you.** → [Getting started](docs/getting-started.md)
 
@@ -336,6 +338,8 @@ See the official OpenAI documentation on [AGENTS.md](https://learn.chatgpt.com/d
 ```bash
 npm install totalfusion
 ```
+
+The package is on [npm](https://www.npmjs.com/package/totalfusion).
 
 You need Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. Rust and Go are needed only to **build** a worker in that language, never to run one.
 
@@ -2271,7 +2275,7 @@ A runtime is an adapter plus a worker that speaks the protocol. See [Go](go.md) 
 
 # Examples
 
-Every example runs from a clone of the repository. The ones in the first table are scripts for Node.js; the ones in the second are applications of Total.js 5. Start with `basic.js`, or with the [tutorials](../docs/tutorials/README.md), which go step by step.
+Every example runs from a clone of the repository (in your own application you install the package with `npm install totalfusion`). The ones in the first table are scripts for Node.js; the ones in the second are applications of Total.js 5. Start with `basic.js`, or with the [tutorials](../docs/tutorials/README.md), which go step by step.
 
 ## Scripts for Node.js
 
