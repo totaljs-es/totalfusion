@@ -52,6 +52,18 @@ func readFrame(reader *bufio.Reader) (any, [][]byte, error) {
 		return nil, nil, err
 	}
 
+	return parseBody(body)
+}
+
+// parseBody reads a frame without its total: its JSON and its binary parts (slices of the body, not copies).
+func parseBody(body []byte) (any, [][]byte, error) {
+
+	total := len(body)
+
+	if total < 8 {
+		return nil, nil, invalidFrame("invalid frame length")
+	}
+
 	jsonLength := int(binary.BigEndian.Uint32(body))
 	jsonEnd := 4 + jsonLength
 
@@ -95,6 +107,45 @@ func readFrame(reader *bufio.Reader) (any, [][]byte, error) {
 	}
 
 	return message, parts, nil
+}
+
+// buildBody is a frame without its total, in one buffer: what travels between the host of WebAssembly and a module.
+func buildBody(message any, parts [][]byte) ([]byte, error) {
+
+	data, err := marshal(message)
+
+	if err != nil {
+		return nil, invalidFrame(err.Error())
+	}
+
+	if len(data) > maxJSON {
+		return nil, invalidFrame("the JSON part of the message is too large")
+	}
+
+	size := 4 + len(data) + 4 + len(parts)*4
+
+	for _, part := range parts {
+		size += len(part)
+	}
+
+	if size > maxFrame {
+		return nil, invalidFrame("the message is too large")
+	}
+
+	body := make([]byte, 0, size)
+	body = binary.BigEndian.AppendUint32(body, uint32(len(data)))
+	body = append(body, data...)
+	body = binary.BigEndian.AppendUint32(body, uint32(len(parts)))
+
+	for _, part := range parts {
+		body = binary.BigEndian.AppendUint32(body, uint32(len(part)))
+	}
+
+	for _, part := range parts {
+		body = append(body, part...)
+	}
+
+	return body, nil
 }
 
 func marshal(value any) ([]byte, error) {

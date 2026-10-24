@@ -98,6 +98,26 @@ It carries the protocol. On Unix and on Windows the module redirects it to the e
 
 `totalfusion.Memory()` is the memory of the process in bytes, and whether the system tells it. Every answer carries it, and it is what `maxMemory` looks at. Linux: resident set size. Windows: the private bytes of the process. Other systems, macOS included: the memory that the Go runtime holds, because asking for the footprint needs `cgo`.
 
+## As a WebAssembly module
+
+The same functions can run in the sandbox of [WebAssembly](../docs/webassembly.md): no files, no network, no environment. Call `app.Wasm()` in an `init` function (a module of this kind does not run `main`), build with Go 1.24 or newer, and call it with `fusion.wasm(...)`:
+
+```go
+func init() {
+	app := totalfusion.New()
+	app.Function("math.add", add).Input("*a:Number\n*b:Number")
+	app.Wasm()
+}
+
+func main() {}
+```
+
+```bash
+GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o module.wasm
+```
+
+A module answers once per call: `Emit` returns an error, and a function registered with `app.Stream` is refused. Nothing changes in the code of the other functions.
+
 ## Building for another system
 
 ```bash

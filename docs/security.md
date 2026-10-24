@@ -4,7 +4,8 @@ TotalFusion runs your code in other processes. This page says what that protects
 
 ## What TotalFusion does and does not do
 
-- **A worker is not a sandbox.** It runs your code with your user's permissions, with your environment (pass `env` to restrict it), your file system and your network. Run only components you trust.
+- **A worker is not a sandbox**, except a [WebAssembly](webassembly.md) module. A Python, Rust or Go worker runs your code with your user's permissions, with your environment (pass `env` to restrict it), your file system and your network. Run only components you trust.
+- **A WebAssembly module is a sandbox, with limits.** It gets no files, no network, no environment and can import nothing but WASI, and that is tested. It is the sandbox of V8 and of WASI in Node.js: the host process has your permissions, so for code you do not trust at all, add a container or a user without privileges. See [WebAssembly](webassembly.md#what-the-sandbox-does).
 - **Nothing is downloaded, compiled or installed for you.** The worker of Python uses the standard library, and the libraries are yours. A Rust or a Go worker is a binary you built or got precompiled.
 - **Agents see only what you expose.** An action is an MCP tool only if its function says `mcp`. The MCP endpoint of Total.js (`CONF.$mcp = true`) has no authentication unless you add one (`Total.mcp.auth`): turn it on only on a machine you control, and put authentication in front of it before anything else.
 - **Total.js validates before your code runs.** The input, `query` and `params` are checked against the contract, and `permissions`, `user`, `sa` and `su` are enforced by the framework before the function is reached. Your function does not see the user.

@@ -48,6 +48,11 @@ func (c *Call) addCredit(amount int64) {
 // stops reading: return that error and the stream ends.
 func (c *Call) Emit(value any) error {
 
+	// a WebAssembly module answers once: there is nobody to send a chunk to
+	if c.writer == nil {
+		return Named("TypeError", "A WebAssembly module cannot stream")
+	}
+
 	for {
 		if c.Cancelled() {
 			return ErrCancelled

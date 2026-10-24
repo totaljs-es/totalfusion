@@ -14,6 +14,7 @@ Every error is a `FusionError` with a stable `code`.
 | `NOT_SERIALIZABLE` / `ENCODE_ERROR` | The result / the arguments are not valid JSON. |
 | `SPAWN_FAILED` / `START_FAILED` / `START_TIMEOUT` | The interpreter or the worker was not found, cannot start, or did not become ready in `startTimeout`. `err.hint` says how to install a missing library. |
 | `PROTOCOL_MISMATCH` | The worker speaks another version of the protocol (a Rust or Go worker built with another version of the crate or the module). |
+| `WASM_TRAP` / `WASM_EXIT` | A [WebAssembly](webassembly.md) module trapped (an out of bounds access, `unreachable`) or ended its own process while it ran the call. The call fails, and the module starts again with a new instance. |
 | `INVALID_CONFIG` / `ALREADY_STARTED` | An option is wrong, or `configure()` was called after the pool started. |
 | `CLOSED` | The pool was shut down while the call was pending. |
 

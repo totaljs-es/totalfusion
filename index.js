@@ -9,7 +9,8 @@ const { watch } = require('./lib/watch');
 const ADAPTERS = {
 	python: () => require('./python'),
 	rust: () => require('./rust'),
-	go: () => require('./go')
+	go: () => require('./go'),
+	wasm: () => require('./wasm')
 };
 
 class Fusion extends EventEmitter {
@@ -31,6 +32,8 @@ class Fusion extends EventEmitter {
 		this.rust.stream = (fn, args, options) => this.stream('rust', fn, args, options);
 		this.go = this.go.bind(this);
 		this.go.stream = (fn, args, options) => this.stream('go', fn, args, options);
+		this.wasm = this.wasm.bind(this);
+		this.wasm.stream = (fn, args, options) => this.stream('wasm', fn, args, options);
 		this.describe = this.describe.bind(this);
 		this.warmup = this.warmup.bind(this);
 		this.doctor = this.doctor.bind(this);
@@ -129,6 +132,10 @@ class Fusion extends EventEmitter {
 
 	go(fn, args, options) {
 		return this.call('go', fn, args, options);
+	}
+
+	wasm(fn, args, options) {
+		return this.call('wasm', fn, args, options);
 	}
 
 	// Contracts declared with @action in the components of a runtime, read without running them

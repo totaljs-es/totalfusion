@@ -6,9 +6,9 @@
   <a href="docs/go.md"><img src="docs/assets/go.svg" alt="Go" height="56"></a>
 </p>
 
-<p align="center"><sub>Python, Rust and Go &middot; for Total.js and Node.js</sub></p>
+<p align="center"><sub>Python, Rust, Go and WebAssembly &middot; for Total.js and Node.js</sub></p>
 
-**Extends Total.js with other runtimes.** Call functions written in Python, Rust and Go from Total.js and Node.js as plain `async` functions, and use them as Actions, API endpoints and MCP tools for AI agents, without leaving JavaScript.
+**Extends Total.js with other runtimes.** Call functions written in Python, Rust and Go from Total.js and Node.js as plain `async` functions, and use them as Actions, API endpoints and MCP tools for AI agents, without leaving JavaScript. WebAssembly modules run in a sandbox.
 
 ```python
 # python/sentiment.py
@@ -34,6 +34,7 @@ Total.js validates the input against the contract before Python runs. The engine
 ## What you get
 
 - **Python, Rust and Go workers** that Node.js supervises: a pool of long-lived processes, correlated calls, timeouts, cancellation and real errors (with the traceback in Python). A crash in a worker never takes your application down. → [Python](docs/python.md), [Rust](docs/rust.md), [Go](docs/go.md)
+- **A sandbox**: a WebAssembly module runs without files, network or environment, in one file that works on any system. → [WebAssembly](docs/webassembly.md)
 - **Total.js integration**: the functions that declare a contract become actions with validated `input`, `query` and `params`, permissions, API routes, MCP tools, Server-Sent Events and a FlowStream component. → [Total.js 5](docs/total5.md)
 - **Binary data without base64**: `Buffer` and typed arrays travel as raw bytes in both directions, NumPy arrays included. A 100 MB buffer makes the round trip in 43 ms. → [Binary data](docs/binary-data.md)
 - **Streaming** with backpressure and cancellation: a generator in Python or a stream function in Rust or Go is an async iterable. → [Streaming](docs/streaming.md)
@@ -48,6 +49,7 @@ Total.js validates the input against the contract before Python runs. The engine
 |---|---|---|
 | [Python](docs/python.md) | Available | Machine learning, scientific computing, any Python library. Python 3.9 or newer. |
 | [Rust](docs/rust.md) | Available | Speed, many threads, a small footprint. You build a binary; running it does not need Rust. |
+| [WebAssembly](docs/webassembly.md) | Available | Code in a sandbox, in one `.wasm` file for every system. Go is the language with an SDK today. |
 | [Go](docs/go.md) | Available | Network and infrastructure code, many calls at once, one binary that you can build for any system. You build a binary; running it does not need Go. |
 
 ## Why not just `child_process`?
@@ -94,11 +96,12 @@ All of them run from a clone of the repository:
 | [examples/streaming.js](examples/streaming.js) | A Python generator as an async iterable, and cancelling it. |
 | [examples/rust.js](examples/rust.js) | The Rust worker of [examples/rust](examples/rust) (build it first with `cargo build --release`). |
 | [examples/go.js](examples/go.js) | The Go worker of [examples/go](examples/go) (build it first with `go build -o worker`). |
+| [examples/wasm.js](examples/wasm.js) | The WebAssembly module of [examples/wasm](examples/wasm) (build it first, see the file). |
 | [examples/components](examples/components) | Components that use scikit-learn, NumPy and PyTorch (they need those libraries in your Python). |
 
 ## Status
 
-Version 0.1.0, not published. The test suite **passed in GitHub Actions on Linux, macOS and Windows** before Go was added. With Go it has more than 300 tests (62 of them for Go) and it was run locally on macOS only; the workflow that runs it on the three systems has not run yet:
+Version 0.1.0, not published. The test suite **passed in GitHub Actions on Linux, macOS and Windows** before Go was added. With Go and WebAssembly it has more than 360 tests (62 of them for Go and 50 for WebAssembly) and it was run locally on macOS only; the workflow that runs it on the three systems has not run yet:
 
 | | Where it has run |
 |---|---|
@@ -107,11 +110,12 @@ Version 0.1.0, not published. The test suite **passed in GitHub Actions on Linux
 | Windows | GitHub Actions (Node.js 24, Python 3.12), before Go was added: the whole suite, including the binary pipes, the memory of a worker and the Rust workers |
 | Rust | The stable toolchain of the runners, and 1.99 locally (the `totalfusion` crate and its worker) |
 | Go | Locally on macOS (Apple silicon) with Go 1.21 and 1.27: the module (with the race detector) and the 62 tests of its worker. The module also compiles and passes `go vet` for Linux, Windows and FreeBSD from macOS, but it has not run on them |
+| WebAssembly | Locally on macOS (Apple silicon) with Node.js 26 and Go 1.27: the 50 tests of the module, including a module that tries to get out. Not run in GitHub Actions yet, and not tried with Node.js 20, 22 and 24 |
 | Total.js | `total5` from npm in GitHub Actions, and also the 0.0.20 development version locally |
 
 Python 3.15 and the combinations that are not in the matrix of [.github/workflows/test.yml](.github/workflows/test.yml) were run only locally.
 
-Not verified: the FlowStream component inside the Flow designer (it was run with the test harness of Total.js), and Go on Linux and Windows.
+Not verified: the FlowStream component inside the Flow designer (it was run with the test harness of Total.js), and Go and WebAssembly on Linux and Windows.
 
 ## Contributing
 

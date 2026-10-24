@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 'use strict';
 
-// totalfusion doctor [--runtime python|rust|go] [--path DIR] [--venv DIR] [--python COMMAND] [--requirements FILE] [--preload a,b]
-//                      [--binary FILE] [--max-memory 2gb] [--json]
+// totalfusion doctor [--runtime python|rust|go|wasm] [--path DIR] [--venv DIR] [--python COMMAND] [--requirements FILE] [--preload a,b]
+//                      [--binary FILE] [--module FILE] [--max-memory 2gb] [--json]
 //
 // Checks the interpreter, the components and the libraries they need, without importing or installing anything.
 // Exit code: 0 when everything is in order (warnings are only advice), 1 when something has to be fixed, 2 for a wrong usage.
 
 const fusion = require('..');
 
-const options = { string: ['runtime', 'path', 'venv', 'python', 'requirements', 'preload', 'binary', 'max-memory'] };
+const options = { string: ['runtime', 'path', 'venv', 'python', 'requirements', 'preload', 'binary', 'module', 'max-memory'] };
 const args = process.argv.slice(2);
 const command = args[0] && !args[0].startsWith('-') ? args.shift() : null;
 const values = {};
@@ -33,7 +33,7 @@ for (let i = 0; i < args.length; i++) {
 }
 
 if (command !== 'doctor') {
-	console.error('Usage: totalfusion doctor [--runtime python|rust|go] [--path DIR] [--venv DIR] [--python COMMAND] [--requirements FILE] [--preload a,b] [--binary FILE] [--max-memory 2gb] [--json]');
+	console.error('Usage: totalfusion doctor [--runtime python|rust|go|wasm] [--path DIR] [--venv DIR] [--python COMMAND] [--requirements FILE] [--preload a,b] [--binary FILE] [--module FILE] [--max-memory 2gb] [--json]');
 	process.exit(2);
 }
 
@@ -57,12 +57,15 @@ if (values.preload)
 if (values.binary)
 	config.binary = values.binary;
 
+if (values.module)
+	config.module = values.module;
+
 if (values['max-memory'])
 	config.maxMemory = values['max-memory'];
 
-const runtime = values.runtime || (values.binary ? 'rust' : 'python');
+const runtime = values.runtime || (values.binary ? 'rust' : values.module ? 'wasm' : 'python');
 
-if (!['python', 'rust', 'go'].includes(runtime)) {
+if (!['python', 'rust', 'go', 'wasm'].includes(runtime)) {
 	console.error('Unknown runtime: ' + runtime);
 	process.exit(2);
 }

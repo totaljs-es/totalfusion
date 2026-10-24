@@ -2,14 +2,15 @@
 
 ```
   Your code: a Total.js action, an API route, a Flow, or any Node.js program
-        |   fusion.python(...)   fusion.rust(...)   fusion.go(...)   fusion.stream(...)
+        |   fusion.python(...)   fusion.rust(...)   fusion.go(...)   fusion.wasm(...)   fusion.stream(...)
         v
   TotalFusion, in your Node.js process
         pool of workers, queue, timeouts, cancellation, recycling, health check, events
         |   frames over the standard input and output: JSON plus raw binary parts
         v
   A worker process, one of many
-        Python (python/worker.py), Rust (the totalfusion crate) or Go (the totalfusion module)
+        Python (python/worker.py), Rust (the totalfusion crate), Go (the totalfusion module)
+        or a WebAssembly module (wasm/host.js runs it in a sandbox)
         |
         v
   Your function

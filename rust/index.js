@@ -7,7 +7,7 @@ const Crypto = require('crypto');
 const { spawn, execFile } = require('child_process');
 const { Pool, bytes } = require('../lib/pool');
 const { FusionError } = require('../lib/errors');
-const { Report, shell } = require('../lib/doctor');
+const { Report, shell, target, compatibility } = require('../lib/doctor');
 const { poolOptions } = require('../lib/options');
 const { VERSION } = require('../lib/protocol');
 
@@ -171,6 +171,16 @@ exports.doctor = async function(config) {
 			report.add('error', 'Binary', '"' + file + '" is not executable', 'chmod +x ' + shell(file));
 			return report;
 		}
+	}
+
+	const mismatch = compatibility(target(file), process.platform, process.arch);
+
+	if (mismatch) {
+
+		report.add(mismatch.status, 'Binary', file + ': ' + mismatch.message, 'Build it on this system, or with cargo build --release --target <the target of this system>');
+
+		if (mismatch.status === 'error')
+			return report;
 	}
 
 	report.add('ok', 'Binary', file + ' (' + Math.round(stat.size / 1024) + ' KB, built ' + stat.mtime.toISOString().replace('T', ' ').substring(0, 19) + ')');

@@ -17,6 +17,7 @@ TotalFusion extends Total.js with other runtimes. These pages explain how to use
 | [Python](python.md) | Machine learning and any Python library. Available. |
 | [Rust](rust.md) | Speed, threads and a small footprint. Available. |
 | [Go](go.md) | Network and infrastructure code, many calls at once, easy to build for any system. Available. |
+| [WebAssembly](webassembly.md) | Functions in a sandbox, in one file that runs on any system. Available. |
 
 ## Features that every runtime shares
 

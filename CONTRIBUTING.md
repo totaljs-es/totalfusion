@@ -10,6 +10,7 @@ cargo test --manifest-path rust/Cargo.toml        # the crate
 
 - Rust: if `cargo` is found, `npm test` builds the worker in `tests/rust` and runs its tests; without it they are not run.
 - Go: if `go` is found (or `GO=/path/to/go`), `npm test` builds the worker in `tests/go` and runs its tests; without it they are not run. The Go module needs Go 1.21 or newer.
+- WebAssembly: `npm test` builds the module of `tests/wasm` for `GOOS=wasip1`, which needs Go 1.24 or newer (the first with `//go:wasmexport`); without it those tests are not run. The host (`wasm/host.js`) needs the `node:wasi` of Node.js.
 - Total.js 5: the integration tests look in `TOTAL5_PATH`, in the `total5` package and in a sibling `../framework5`; without it they are skipped.
 - `TOTALFUSION_PYTHON=/path/to/python npm test` runs the suite with another Python. `TOTALFUSION_TEST_NUMPY=/path/to/python` enables the NumPy tests.
 
@@ -37,6 +38,7 @@ A change should come with tests. When you fix something, check that the test fai
 | `python/` | The Python adapter and its worker (`worker.py`, standard library only) and SDK (`sdk/totalfusion.py`). |
 | `rust/` | The Rust adapter (`index.js`) and the `totalfusion` crate (`src/`). |
 | `go/` | The Go adapter (`index.js`) and the `totalfusion` module (`*.go`). |
+| `wasm/` | The WebAssembly adapter (`index.js`) and the host process that runs a module in a sandbox (`host.js`). The SDK of Go for it is `go/wasm*.go`. |
 | `total5/` | The integration with Total.js 5: actions, MCP, Server-Sent Events and the FlowStream component. |
 | `tests/` | The tests, and the components and workers they run. |
 

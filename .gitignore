@@ -159,6 +159,9 @@ rust/Cargo.lock
 /examples/go/worker
 /examples/go/worker.exe
 
+# WebAssembly build output of the examples
+/examples/wasm/module.wasm
+
 # Python bytecode, written next to the code when it runs
 __pycache__/
 *.pyc
