@@ -65,8 +65,11 @@ ON('ready', async function() {
 	report.secret = await events('/secret/');
 	report.endless = await events('/endless/', 3);
 
-	await new Promise(resolve => setTimeout(resolve, 400));
-	report.closed = await fusion.python('streams.closed');
+	// the cancel travels to the worker after the browser left: wait for it, up to 5 seconds
+	for (let i = 0; i < 50 && !report.closed; i++) {
+		await new Promise(resolve => setTimeout(resolve, 100));
+		report.closed = await fusion.python('streams.closed');
+	}
 
 	await fusion.shutdown();
 	console.log(JSON.stringify(report));
