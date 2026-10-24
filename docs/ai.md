@@ -58,10 +58,11 @@ Each check has a `status` (`ok`, `warn` or `error`), a `name`, a `message` and, 
 
 The repository has the files that the common agents look for. They all lead to the same instructions, so there is only one text to keep true:
 
-- `AGENTS.md`: the instructions.
+- `AGENTS.md`: the instructions. Each area of the repository (`go`, `rust`, `python`, `wasm`, `total5`, `tests`) has its own, with a `CLAUDE.md` that imports it, because Claude Code loads the `CLAUDE.md` of a folder when it works there.
 - `CLAUDE.md` and `GEMINI.md`: they import `AGENTS.md`.
 - `.github/copilot-instructions.md`: a short version for GitHub Copilot, with the rules that matter most.
-- `.claude/skills/`: three skills for Claude Code (add a function to an application, diagnose a worker that fails, add a tutorial). Each one is a checklist with the real commands.
+- `.claude/skills/`: four skills for Claude Code (add a function to an application, diagnose a worker that fails, add a tutorial, verify a change). Each one is a checklist with the real commands.
+- `.claude/settings.json`: the commands that are safe to run without asking (the tests, `npm run check`, read-only git).
 
 ## What is verified
 

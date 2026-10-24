@@ -9,6 +9,8 @@
 
 <p align="center"><sub>Python, Rust, Go and WebAssembly &middot; for Total.js and Node.js</sub></p>
 
+<p align="center"><a href="https://github.com/totaljs-es/totalfusion/actions/workflows/test.yml"><img src="https://github.com/totaljs-es/totalfusion/actions/workflows/test.yml/badge.svg" alt="Tests on Linux, macOS and Windows"></a></p>
+
 **Extends Total.js with other runtimes.** Call functions written in Python, Rust and Go from Total.js and Node.js as plain `async` functions, and use them as Actions, API endpoints and MCP tools for AI agents, without leaving JavaScript. WebAssembly modules run in a sandbox.
 
 ```python
@@ -124,7 +126,7 @@ Not verified: connecting a specific AI client to the MCP endpoint, and the compo
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the tests and how the project is organised, and [CHANGELOG.md](CHANGELOG.md) for what each version contains. **AI coding agents:** [AGENTS.md](AGENTS.md) says how to use TotalFusion in an application and how to work on this repository; it is also in the package.
+To report a vulnerability, see [SECURITY.md](SECURITY.md). See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the tests and how the project is organised, and [CHANGELOG.md](CHANGELOG.md) for what each version contains. **AI coding agents:** [AGENTS.md](AGENTS.md) says how to use TotalFusion in an application and how to work on this repository; it is also in the package.
 
 ## Credits
 

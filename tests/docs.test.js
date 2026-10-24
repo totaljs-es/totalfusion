@@ -11,7 +11,7 @@ const ROOT = Path.join(__dirname, '..');
 const DOCS = Path.join(ROOT, 'docs');
 
 const PAGES = [
-	'README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'AGENTS.md', Path.join('rust', 'README.md'), Path.join('go', 'README.md'), Path.join('examples', 'totaljs-app', 'README.md'), Path.join('examples', 'totaljs-numerics', 'README.md'),
+	'README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'AGENTS.md', 'SECURITY.md', Path.join('examples', 'README.md'), Path.join('rust', 'README.md'), Path.join('go', 'README.md'), Path.join('examples', 'totaljs-app', 'README.md'), Path.join('examples', 'totaljs-numerics', 'README.md'),
 	...Fs.readdirSync(DOCS).filter(name => name.endsWith('.md')).map(name => Path.join('docs', name)),
 	...Fs.readdirSync(Path.join(DOCS, 'tutorials')).filter(name => name.endsWith('.md')).map(name => Path.join('docs', 'tutorials', name))
 ];

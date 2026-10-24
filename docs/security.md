@@ -16,4 +16,4 @@ TotalFusion runs your code in other processes. This page says what that protects
 
 ## Reporting a problem
 
-Open an issue in the repository. Do not include secrets in it.
+A vulnerability is reported **privately**, as [SECURITY.md](../SECURITY.md) says. Any other problem: open an issue, with the output of `npx totalfusion doctor --json`, and do not include secrets in it.

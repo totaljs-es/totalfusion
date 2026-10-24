@@ -77,7 +77,7 @@ function check(file) {
 	const text = read(file);
 
 	for (const token of mentioned(text))
-		assert.ok(exists(token), file + ' mentions ' + token + ', which does not exist');
+		assert.ok(exists(token) || (/^\.{1,2}\//.test(token) && Fs.existsSync(Path.join(ROOT, Path.dirname(file), token))), file + ' mentions ' + token + ', which does not exist');
 
 	for (const command of commands(text)) {
 		if (command.script)
@@ -88,6 +88,9 @@ function check(file) {
 }
 
 const SKILLS = Fs.readdirSync(Path.join(ROOT, '.claude', 'skills'));
+
+// The areas of the repository that have instructions of their own
+const AREAS = ['go', 'rust', 'python', 'wasm', 'total5', 'tests'];
 
 describe('AGENTS.md', function() {
 
@@ -105,7 +108,7 @@ describe('AGENTS.md', function() {
 
 	test('it is for any agent: it does not carry the personal way of working of the maintainers', function() {
 
-		for (const file of ['AGENTS.md', 'CLAUDE.md', 'GEMINI.md', '.github/copilot-instructions.md', 'docs/ai.md', ...SKILLS.map(name => '.claude/skills/' + name + '/SKILL.md')]) {
+		for (const file of ['AGENTS.md', 'CLAUDE.md', 'GEMINI.md', '.github/copilot-instructions.md', 'docs/ai.md', ...AREAS.map(area => area + '/AGENTS.md'), ...SKILLS.map(name => '.claude/skills/' + name + '/SKILL.md')]) {
 			const text = read(file);
 			assert.ok(!/Co-Authored-By|Generated with|the owner|commit only when|never push/i.test(text), file + ' has rules that are not about the project');
 		}
@@ -138,10 +141,104 @@ describe('the files for each agent lead to AGENTS.md', function() {
 	test('CLAUDE.md names the skills that exist', function() {
 		const text = read('CLAUDE.md');
 		assert.ok(text.includes('.claude/skills/'));
-		assert.deepEqual(SKILLS.sort(), ['totalfusion-add-function', 'totalfusion-add-tutorial', 'totalfusion-diagnose-worker']);
+		assert.deepEqual(SKILLS.sort(), ['totalfusion-add-function', 'totalfusion-add-tutorial', 'totalfusion-diagnose-worker', 'totalfusion-verify-change']);
+		assert.ok(text.includes('skills of this repository'));
+	});
 
-		// it says how many there are
-		assert.ok(text.includes('three skills') || text.includes('skills of this repository'));
+});
+
+describe('the instructions of each area of the repository', function() {
+
+	test('every area has AGENTS.md, and a CLAUDE.md that imports it (Claude Code reads the CLAUDE.md of a folder, not its AGENTS.md)', function() {
+
+		for (const area of AREAS) {
+			assert.ok(Fs.existsSync(Path.join(ROOT, area, 'AGENTS.md')), area + ' has no AGENTS.md');
+			assert.match(read(area + '/CLAUDE.md'), /^@AGENTS\.md$/m, area + '/CLAUDE.md does not import AGENTS.md');
+		}
+	});
+
+	test('what each one mentions exists, and it points to the instructions of the project', function() {
+
+		for (const area of AREAS) {
+			check(area + '/AGENTS.md');
+			assert.ok(read(area + '/AGENTS.md').includes('../AGENTS.md'), area + '/AGENTS.md does not lead to the instructions of the project');
+		}
+	});
+
+	test('none is longer than 200 lines, which is where instructions stop being followed', function() {
+		for (const file of ['AGENTS.md', ...AREAS.map(area => area + '/AGENTS.md')])
+			assert.ok(read(file).split('\n').length <= 200, file + ' is too long');
+	});
+
+});
+
+describe('the shared settings of Claude Code', function() {
+
+	const settings = JSON.parse(read('.claude/settings.json'));
+
+	test('they allow what is safe to run without asking, and the scripts exist', function() {
+
+		assert.equal(settings.$schema, 'https://json.schemastore.org/claude-code-settings.json');
+		assert.ok(settings.permissions.allow.length > 5);
+
+		for (const rule of settings.permissions.allow) {
+			assert.match(rule, /^Bash\([^)]+\)$/, rule);
+
+			const script = /^Bash\(npm run ([\w:-]+)\)$/.exec(rule);
+
+			if (script)
+				assert.ok(pkg.scripts[script[1]], rule + ' is not a script of package.json');
+		}
+
+		assert.ok(settings.permissions.allow.includes('Bash(npm test)'));
+	});
+
+	test('nothing that changes the world is allowed: no install, no publish, no push, no deletion', function() {
+		for (const rule of settings.permissions.allow)
+			assert.ok(!/publish|push|install|rm |curl|wget|sudo|checkout|reset|clean|\bsh\b|bash -c/.test(rule), rule + ' allows something that it should not');
+	});
+
+	test('secrets are not read, and the personal settings are not committed', function() {
+		assert.ok(settings.permissions.deny.includes('Read(./.env)'));
+		assert.match(read('.gitignore'), /^\.claude\/settings\.local\.json$/m);
+	});
+
+});
+
+describe('what a public repository has', function() {
+
+	test('a security policy that says how to report privately, and that the documentation links', function() {
+		assert.match(read('SECURITY.md'), /Report a vulnerability/);
+		assert.ok(read('docs/security.md').includes('SECURITY.md'));
+		assert.ok(read('README.md').includes('SECURITY.md'));
+	});
+
+	test('templates for issues and pull requests, and a link to report a vulnerability in private', function() {
+
+		for (const file of ['bug_report.yml', 'feature_request.yml'])
+			assert.match(read('.github/ISSUE_TEMPLATE/' + file), /^name: .+\ndescription: .+\n[\s\S]*\nbody:\n/, file);
+
+		assert.match(read('.github/ISSUE_TEMPLATE/bug_report.yml'), /doctor --json/);
+		assert.match(read('.github/ISSUE_TEMPLATE/config.yml'), /security\/advisories\/new/);
+		assert.match(read('.github/pull_request_template.md'), /npm run generate/);
+	});
+
+	test('the badge points to the workflow that exists', function() {
+		const workflow = /actions\/workflows\/([\w.-]+)\/badge\.svg/.exec(read('README.md'));
+		assert.ok(workflow, 'the README has no badge');
+		assert.ok(Fs.existsSync(Path.join(ROOT, '.github', 'workflows', workflow[1])), workflow[1] + ' does not exist');
+	});
+
+	test('the examples have an index that names each one', function() {
+
+		const index = read('examples/README.md');
+
+		for (const name of Fs.readdirSync(Path.join(ROOT, 'examples'), { withFileTypes: true }).filter(entry => !/^\.|node_modules/.test(entry.name) && (entry.isDirectory() || entry.name.endsWith('.js'))).map(entry => entry.name))
+			assert.ok(index.includes('[' + name + ']') || index.includes('(' + name + ')') || index.includes('[' + name.replace(/\.js$/, '') + ']'), name + ' is not in examples/README.md');
+	});
+
+	test('the files that Total.js writes while it runs are not committed', function() {
+		assert.match(read('.gitignore'), /^index\.js\.json$/m);
 	});
 
 });

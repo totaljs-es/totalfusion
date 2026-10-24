@@ -151,6 +151,12 @@ vite.config.ts.timestamp-*
 # Source maps written by Total.js when it runs a script
 *.js.map
 
+# Total.js writes its statistics next to the script that it runs
+index.js.json
+
+# Personal settings of Claude Code (the shared ones, .claude/settings.json, are committed)
+.claude/settings.local.json
+
 # Rust build output
 target/
 rust/Cargo.lock

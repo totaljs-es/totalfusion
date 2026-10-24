@@ -1,0 +1,50 @@
+name: Bug report
+description: Something does not work as the documentation says
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. A report with the output of the `doctor` and a small way to reproduce it can usually be solved at once.
+        **Do not report a vulnerability here**: see SECURITY.md.
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: What is it about?
+      options:
+        - Python
+        - Rust
+        - Go
+        - WebAssembly
+        - Total.js (actions, MCP, Server-Sent Events)
+        - Flow
+        - The doctor or the command
+        - The documentation
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce it
+      description: The smallest function, configuration and call that show it.
+      render: js
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of the doctor
+      description: "`npx totalfusion doctor --json` (add `--runtime` and `--binary` or `--module` if it is not Python). Remove anything private."
+      render: json
+  - type: input
+    id: versions
+    attributes:
+      label: Versions and system
+      description: "TotalFusion, Node.js, the system (Linux, macOS, Windows) and Python, Rust or Go if you use them."
+    validations:
+      required: true

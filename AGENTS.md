@@ -42,23 +42,27 @@ for await (const chunk of fusion.python.stream('module.generator', args)) { }
 
 ## Repository layout
 
+Each area (`go/`, `rust/`, `python/`, `wasm/`, `total5/`, `tests/`) has its own `AGENTS.md` with the rules of that area: read it before you change files there.
+
 - `index.js` is the `Fusion` class and the entry point. `lib/` is the engine: `pool.js` (workers, queue, timeouts, recycling, health check, retries), `protocol.js` (frames), `stream.js`, `watch.js`, `doctor.js`, `options.js`, `errors.js`.
 - `python/`, `rust/`, `go/`, `wasm/` are the runtimes: each has an adapter (`index.js`) and its worker or SDK (`worker.py` and `sdk/`; the `totalfusion` crate in `rust/src`; the Go module in `go/*.go`; `wasm/host.js`).
 - `total5/` is the Total.js integration: `index.js` (`register`, `sse`), `flow.js` and `flow/*.html` (the components of Flow).
 - `bin/totalfusion.js` is the `doctor` command. `scripts/flow-db.js` builds `total5/flow/db.json`; `scripts/llms.js` builds `llms.txt` and `llms-full.txt`.
-- For agents: this file, `CLAUDE.md` and `GEMINI.md` (they import it), `.github/copilot-instructions.md`, `.claude/skills/` (three checklists: add a function, diagnose a worker, add a tutorial), `schemas/` and `llms.txt`.
-- `tests/` has the tests and the workers they run (`tests/go`, `tests/rust`, `tests/wasm`, `tests/components`). `examples/` has the examples and the applications of the tutorials (`examples/tutorials`). `docs/` is the documentation, and it is tested.
+- For agents: this file, `CLAUDE.md` and `GEMINI.md` (they import it), `.github/copilot-instructions.md`, `.claude/skills/` (four checklists: add a function, diagnose a worker, add a tutorial, verify a change) and `.claude/settings.json` (the commands that are safe to run without asking), `schemas/` and `llms.txt`.
+- `tests/` has the tests and the workers they run (`tests/go`, `tests/rust`, `tests/wasm`, `tests/components`). `examples/` has the examples (`examples/README.md` lists them, and `tests/examples.test.js` runs them) and the applications of the tutorials (`examples/tutorials`). `docs/` is the documentation, and it is tested.
 - `.github/workflows/test.yml` runs the suite on Linux (Node.js 20, 22, 24), macOS and Windows.
 
 ## Commands
 
 ```bash
 npm test                                  # the whole suite (node --test)
+npm run check                             # the fast checks: documentation, files for agents, package
+npm run generate                          # llms.txt, llms-full.txt and total5/flow/db.json
 node --test tests/go.test.js              # one file
 npm run test:rust                         # cargo test of the crate
 npm run test:go                           # go test of the module
-node scripts/flow-db.js --write           # after changing a component of Flow
-node scripts/llms.js --write              # after adding or changing a page of the documentation
+node scripts/flow-db.js --write           # only the list of components of Flow
+node scripts/llms.js --write              # only llms.txt and llms-full.txt
 npx totalfusion doctor --path tests/components
 npm pack --dry-run                        # what goes into the package
 ```

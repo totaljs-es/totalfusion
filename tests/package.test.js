@@ -35,7 +35,7 @@ test('everything the code needs is in the package', function() {
 	}
 
 	// The workers and what they read
-	for (const needed of ['python/worker.py', 'python/pip-names.json', 'python/sdk/totalfusion.py', 'rust/Cargo.toml', 'rust/src/lib.rs', 'go/go.mod', 'go/app.go', 'go/index.js', 'wasm/index.js', 'wasm/host.js', 'bin/totalfusion.js', 'total5/flow.js', 'total5/flow/python.html', 'total5/flow/stream.html', 'total5/flow/db.json', 'scripts/flow-db.js', 'LICENSE', 'README.md', 'CHANGELOG.md', 'AGENTS.md', 'llms.txt', 'schemas/configure.schema.json', 'schemas/contract.schema.json'])
+	for (const needed of ['python/worker.py', 'python/pip-names.json', 'python/sdk/totalfusion.py', 'rust/Cargo.toml', 'rust/src/lib.rs', 'go/go.mod', 'go/app.go', 'go/index.js', 'wasm/index.js', 'wasm/host.js', 'bin/totalfusion.js', 'total5/flow.js', 'total5/flow/python.html', 'total5/flow/stream.html', 'total5/flow/db.json', 'scripts/flow-db.js', 'LICENSE', 'README.md', 'CHANGELOG.md', 'AGENTS.md', 'go/AGENTS.md', 'rust/AGENTS.md', 'python/AGENTS.md', 'wasm/AGENTS.md', 'total5/AGENTS.md', 'llms.txt', 'schemas/configure.schema.json', 'schemas/contract.schema.json'])
 		assert.ok(files.has(needed), needed + ' is not in the package');
 });
 

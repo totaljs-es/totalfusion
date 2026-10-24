@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(npm test)",
+      "Bash(npm run check)",
+      "Bash(npm run generate)",
+      "Bash(npm run test:rust)",
+      "Bash(npm run test:go)",
+      "Bash(node --test *)",
+      "Bash(node scripts/*)",
+      "Bash(npx totalfusion doctor *)",
+      "Bash(npm pack --dry-run *)",
+      "Bash(go vet *)",
+      "Bash(go test *)",
+      "Bash(cargo test *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}

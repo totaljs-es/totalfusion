@@ -81,4 +81,7 @@ module.exports.cross = function(goos, goarch) {
 	return crossed[key] = file;
 };
 
+// The command of Go, or null
+module.exports.command = go;
+
 module.exports.skip = () => module.exports() ? false : 'Go is not installed (the go command was not found)';

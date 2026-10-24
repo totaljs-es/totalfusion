@@ -19,6 +19,8 @@ Node.js 20 or newer, no dependencies, plain JavaScript (no TypeScript). Version 
 
 <p align="center"><sub>Python, Rust, Go and WebAssembly &middot; for Total.js and Node.js</sub></p>
 
+<p align="center"><a href="https://github.com/totaljs-es/totalfusion/actions/workflows/test.yml"><img src="https://github.com/totaljs-es/totalfusion/actions/workflows/test.yml/badge.svg" alt="Tests on Linux, macOS and Windows"></a></p>
+
 **Extends Total.js with other runtimes.** Call functions written in Python, Rust and Go from Total.js and Node.js as plain `async` functions, and use them as Actions, API endpoints and MCP tools for AI agents, without leaving JavaScript. WebAssembly modules run in a sandbox.
 
 ```python
@@ -134,7 +136,7 @@ Not verified: connecting a specific AI client to the MCP endpoint, and the compo
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the tests and how the project is organised, and [CHANGELOG.md](CHANGELOG.md) for what each version contains. **AI coding agents:** [AGENTS.md](AGENTS.md) says how to use TotalFusion in an application and how to work on this repository; it is also in the package.
+To report a vulnerability, see [SECURITY.md](SECURITY.md). See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the tests and how the project is organised, and [CHANGELOG.md](CHANGELOG.md) for what each version contains. **AI coding agents:** [AGENTS.md](AGENTS.md) says how to use TotalFusion in an application and how to work on this repository; it is also in the package.
 
 ## Credits
 
@@ -192,23 +194,27 @@ for await (const chunk of fusion.python.stream('module.generator', args)) { }
 
 ## Repository layout
 
+Each area (`go/`, `rust/`, `python/`, `wasm/`, `total5/`, `tests/`) has its own `AGENTS.md` with the rules of that area: read it before you change files there.
+
 - `index.js` is the `Fusion` class and the entry point. `lib/` is the engine: `pool.js` (workers, queue, timeouts, recycling, health check, retries), `protocol.js` (frames), `stream.js`, `watch.js`, `doctor.js`, `options.js`, `errors.js`.
 - `python/`, `rust/`, `go/`, `wasm/` are the runtimes: each has an adapter (`index.js`) and its worker or SDK (`worker.py` and `sdk/`; the `totalfusion` crate in `rust/src`; the Go module in `go/*.go`; `wasm/host.js`).
 - `total5/` is the Total.js integration: `index.js` (`register`, `sse`), `flow.js` and `flow/*.html` (the components of Flow).
 - `bin/totalfusion.js` is the `doctor` command. `scripts/flow-db.js` builds `total5/flow/db.json`; `scripts/llms.js` builds `llms.txt` and `llms-full.txt`.
-- For agents: this file, `CLAUDE.md` and `GEMINI.md` (they import it), `.github/copilot-instructions.md`, `.claude/skills/` (three checklists: add a function, diagnose a worker, add a tutorial), `schemas/` and `llms.txt`.
-- `tests/` has the tests and the workers they run (`tests/go`, `tests/rust`, `tests/wasm`, `tests/components`). `examples/` has the examples and the applications of the tutorials (`examples/tutorials`). `docs/` is the documentation, and it is tested.
+- For agents: this file, `CLAUDE.md` and `GEMINI.md` (they import it), `.github/copilot-instructions.md`, `.claude/skills/` (four checklists: add a function, diagnose a worker, add a tutorial, verify a change) and `.claude/settings.json` (the commands that are safe to run without asking), `schemas/` and `llms.txt`.
+- `tests/` has the tests and the workers they run (`tests/go`, `tests/rust`, `tests/wasm`, `tests/components`). `examples/` has the examples (`examples/README.md` lists them, and `tests/examples.test.js` runs them) and the applications of the tutorials (`examples/tutorials`). `docs/` is the documentation, and it is tested.
 - `.github/workflows/test.yml` runs the suite on Linux (Node.js 20, 22, 24), macOS and Windows.
 
 ## Commands
 
 ```bash
 npm test                                  # the whole suite (node --test)
+npm run check                             # the fast checks: documentation, files for agents, package
+npm run generate                          # llms.txt, llms-full.txt and total5/flow/db.json
 node --test tests/go.test.js              # one file
 npm run test:rust                         # cargo test of the crate
 npm run test:go                           # go test of the module
-node scripts/flow-db.js --write           # after changing a component of Flow
-node scripts/llms.js --write              # after adding or changing a page of the documentation
+node scripts/flow-db.js --write           # only the list of components of Flow
+node scripts/llms.js --write              # only llms.txt and llms-full.txt
 npx totalfusion doctor --path tests/components
 npm pack --dry-run                        # what goes into the package
 ```
@@ -297,10 +303,11 @@ Each check has a `status` (`ok`, `warn` or `error`), a `name`, a `message` and, 
 
 The repository has the files that the common agents look for. They all lead to the same instructions, so there is only one text to keep true:
 
-- `AGENTS.md`: the instructions.
+- `AGENTS.md`: the instructions. Each area of the repository (`go`, `rust`, `python`, `wasm`, `total5`, `tests`) has its own, with a `CLAUDE.md` that imports it, because Claude Code loads the `CLAUDE.md` of a folder when it works there.
 - `CLAUDE.md` and `GEMINI.md`: they import `AGENTS.md`.
 - `.github/copilot-instructions.md`: a short version for GitHub Copilot, with the rules that matter most.
-- `.claude/skills/`: three skills for Claude Code (add a function to an application, diagnose a worker that fails, add a tutorial). Each one is a checklist with the real commands.
+- `.claude/skills/`: four skills for Claude Code (add a function to an application, diagnose a worker that fails, add a tutorial, verify a change). Each one is a checklist with the real commands.
+- `.claude/settings.json`: the commands that are safe to run without asking (the tests, `npm run check`, read-only git).
 
 ## What is verified
 
@@ -1676,7 +1683,34 @@ TotalFusion runs your code in other processes. This page says what that protects
 
 ## Reporting a problem
 
-Open an issue in the repository. Do not include secrets in it.
+A vulnerability is reported **privately**, as [SECURITY.md](../SECURITY.md) says. Any other problem: open an issue, with the output of `npx totalfusion doctor --json`, and do not include secrets in it.
+
+---
+
+<!-- Security policy: SECURITY.md -->
+
+# Security policy
+
+## Supported versions
+
+TotalFusion is at version 0.1.0, and the latest release is the one that is supported.
+
+## Reporting a vulnerability
+
+Report it **privately**: open the *Security* tab of the repository and choose *Report a vulnerability* (private vulnerability reporting of GitHub). Please do not open a public issue for it. Say which version and which runtime (Python, Rust, Go or WebAssembly), the system, the steps to reproduce it and what an attacker could do. Do not include secrets.
+
+## What is a vulnerability
+
+- A module of WebAssembly that gets out of its sandbox: it reads or writes a file, sees the environment, opens a connection or affects the process that runs it.
+- A malformed frame or a payload that crashes or exhausts the engine in Node.js.
+- A function that reads the contracts or the environment (`doctor`, `describe`, `register`) running code that the documentation says it does not run.
+- A message of an error that leaks to a client what the documentation says that it keeps in the log.
+
+## What is not
+
+- A worker of Python, Rust or Go is **not** a sandbox, and the documentation says so: it runs with the permissions of the process. Run only code that you trust, or use a module of WebAssembly. See [Security](docs/security.md).
+- The MCP endpoint of Total.js has no authentication unless you add one. That is documented, and turning it on in an application that listens on a public address is a decision of whoever deploys it.
+- A flaw in Node.js, V8, WASI, Python, Rust or Go themselves belongs to those projects. Tell them, and tell us if TotalFusion makes it reachable.
 
 ---
 
@@ -2222,6 +2256,36 @@ A runtime is an adapter plus a worker that speaks the protocol. See [Go](go.md) 
 
 ---
 
+<!-- Examples: examples/README.md -->
+
+# Examples
+
+Every example runs from a clone of the repository. The ones in the first table are scripts for Node.js; the ones in the second are applications of Total.js 5. Start with `basic.js`, or with the [tutorials](../docs/tutorials/README.md), which go step by step.
+
+## Scripts for Node.js
+
+| Example | What it shows | Needs |
+|---|---|---|
+| [basic.js](basic.js) | `fusion.python()` in any Node.js program, and what an error of Python looks like in JavaScript. `node examples/basic.js` | Python 3.9 |
+| [streaming.js](streaming.js) | A Python generator as an async iterable, and how leaving the loop stops it. `node examples/streaming.js` | Python 3.9 |
+| [rust.js](rust.js) | The Rust worker of [rust](rust): the longest Collatz chain below 3 million, a mistake of the caller and the `doctor`. Build it first: `cd examples/rust && cargo build --release` | Rust |
+| [go.js](go.js) | The same worker in [Go](go). Build it first: `cd examples/go && go build -o worker` | Go 1.21 |
+| [wasm.js](wasm.js) | The same function as a module of WebAssembly in a sandbox, from [wasm](wasm). Build it first: `cd examples/wasm && GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o module.wasm` | Go 1.24 |
+
+[components](components) has the Python functions that `basic.js` and `streaming.js` call (the standard library only), and others that use scikit-learn, NumPy and PyTorch (they need those libraries in your Python).
+
+## Applications of Total.js 5
+
+| Example | What it shows |
+|---|---|
+| [tutorials](tutorials) | The application of each tutorial. A test of the project starts it and checks what the page says. |
+| [totaljs-app](totaljs-app) | Actions, an API route, Server-Sent Events and reload on edit, with Python. `npm install && npm start` |
+| [totaljs-numerics](totaljs-numerics) | NumPy statistics, a Rust action and typed arrays as binary data. Its README says how to prepare it. |
+
+The scripts and the applications use the workers that are in this repository, so the paths are relative to it. In your own project the import is `require('totalfusion')` and the paths are yours.
+
+---
+
 <!-- Tutorials: docs/tutorials/README.md -->
 
 # Tutorials
@@ -2634,7 +2698,8 @@ The first version.
 - **Total.js 5:** `fusion.register()` turns the functions that declare a contract into `NEWACTION()`s, with `input`, `query`, `params` and access options (`permissions`, `user`, `sa`, `su`) validated by the framework, and into MCP tools when the function says `mcp`. Server-Sent Events (`fusion.sse`) are included.
 - **Flow:** seven components for Total.js Flow (group *TotalFusion*): one for each runtime that calls a function with the data of each message, **Stream** (every chunk is a message, with `Stop` and cancellation when the flow stops), **Events** (the events of the workers as messages) and **Stats**. A list for the catalog of the designer (`total5/flow/db.json`) and `fusion.flow()` for the logic. They were run in the designer of Flow 11.1.
 - **Tutorials:** step by step pages (`docs/tutorials`), each with an application in `examples/tutorials` that a test of the project starts and checks on every change. The first one: a Python function as an API and as a tool for an AI agent, with live reload. The second: the code of third parties in the sandbox of WebAssembly, with a module that tries to get out and one that never returns.
-- **For agents and models:** `AGENTS.md` (also in the package) says how to use TotalFusion in an application and how to work on the repository; `CLAUDE.md`, `GEMINI.md` and the instructions of Copilot lead to it; three skills for Claude Code (`.claude/skills`); `llms.txt` and `llms-full.txt` built from the documentation; JSON Schemas of the configuration and of the contracts (`schemas/`); and `docs/ai.md`. A test keeps them true.
+- **For agents and models:** `AGENTS.md` (also in the package) says how to use TotalFusion in an application and how to work on the repository; `CLAUDE.md`, `GEMINI.md` and the instructions of Copilot lead to it; four skills for Claude Code (`.claude/skills`) and its shared settings; `llms.txt` and `llms-full.txt` built from the documentation; JSON Schemas of the configuration and of the contracts (`schemas/`); and `docs/ai.md`. A test keeps them true.
+- **For a public repository:** `SECURITY.md` (private reporting), templates for issues (the bug report asks for the output of `doctor --json`) and for pull requests, an index of the examples that a test runs (`tests/examples.test.js`), the badge of the tests, and an `AGENTS.md` in each area (`go`, `rust`, `python`, `wasm`, `total5`, `tests`).
 - **Binary data** without base64: `Buffer` and typed arrays travel as raw bytes in both directions (NumPy arrays included). A 100 MB buffer makes the round trip in 43 ms.
 - **Streaming:** generators in Python and stream functions in Rust and Go become async iterables, with backpressure and cancellation.
 - **Several calls at the same time** in a worker (`concurrency`), for async functions in Python for the threads of a Rust worker and for the goroutines of a Go one.
@@ -2654,7 +2719,7 @@ Verified in GitHub Actions on Linux (Ubuntu with Node.js 20, 22 and 24 and Pytho
 
 # Contributing
 
-The conventions and the lessons of the project, written for AI coding agents and useful to anyone, are in [AGENTS.md](AGENTS.md).
+`npm run check` runs the fast tests (documentation, files for agents, package) and `npm run generate` rebuilds the files that are generated from the pages. The conventions and the lessons of the project, written for AI coding agents and useful to anyone, are in [AGENTS.md](AGENTS.md).
 
 ## Running the tests
 

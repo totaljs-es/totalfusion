@@ -4,4 +4,4 @@
 
 ## Claude Code
 
-The skills of this repository are in `.claude/skills/`: how to add a function to an application, how to diagnose a worker that fails and how to add a tutorial. They load when the task matches their description.
+The skills of this repository are in `.claude/skills/`: how to add a function to an application, how to diagnose a worker that fails, how to add a tutorial and how to verify a change. `.claude/settings.json` lists the commands that are safe to run without asking (the tests, the checks, read-only git). They load when the task matches their description.

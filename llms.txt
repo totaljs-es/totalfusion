@@ -31,6 +31,7 @@ Node.js 20 or newer, no dependencies, plain JavaScript (no TypeScript). Version 
 - [Errors and cancellation](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/errors.md): Every error code
 - [Development and diagnosis](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/development.md): Reload on change, and the doctor
 - [Security](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/security.md): What it protects and what it does not
+- [Security policy](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/SECURITY.md): How to report a vulnerability, and what counts as one
 ## Reference
 
 - [Reference](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/reference.md): Every option, method and command
@@ -39,6 +40,7 @@ Node.js 20 or newer, no dependencies, plain JavaScript (no TypeScript). Version 
 - [Schema of a contract](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/schemas/contract.schema.json): JSON Schema of the contract of a function and of what --describe prints
 ## Tutorials
 
+- [Examples](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/examples/README.md): Every script and application of examples/, with what it needs
 - [Tutorials](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/tutorials/README.md): The list, with what each one needs
 - [A Python function as an API and as a tool for an AI agent](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/tutorials/01-python-action-and-mcp.md): Contract, validation, MCP, live reload
 - [The code of third parties in the sandbox of WebAssembly](https://raw.githubusercontent.com/totaljs-es/totalfusion/main/docs/tutorials/02-wasm-sandbox.md): One module for each customer, a hostile module, a timeout

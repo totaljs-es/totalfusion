@@ -1,6 +1,6 @@
 # Contributing
 
-The conventions and the lessons of the project, written for AI coding agents and useful to anyone, are in [AGENTS.md](AGENTS.md).
+`npm run check` runs the fast tests (documentation, files for agents, package) and `npm run generate` rebuilds the files that are generated from the pages. The conventions and the lessons of the project, written for AI coding agents and useful to anyone, are in [AGENTS.md](AGENTS.md).
 
 ## Running the tests
 
