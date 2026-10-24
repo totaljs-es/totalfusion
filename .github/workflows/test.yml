@@ -74,6 +74,8 @@ jobs:
           grep -n -E "^\s*(✖|not ok)|failing tests|^ℹ (tests|pass|fail|cancelled|skipped)|^# (tests|pass|fail|cancelled|skipped)" test.log | head -80 || true
           echo "=== the first error messages ==="
           grep -n -E "AssertionError|Error \[|Error:|ENOENT|EACCES|timed out" test.log | head -40 || true
+          echo "=== what the workers said before they stopped (the lines after the error) ==="
+          grep -n -A6 -E "worker stopped during the call" test.log | head -60 || true
 
       - name: Keep the log
         if: failure()
