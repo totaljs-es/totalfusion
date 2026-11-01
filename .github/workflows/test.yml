@@ -31,7 +31,7 @@ jobs:
           if [ "$EVENT" = push ] || [ "$EVENT" = pull_request ]; then
             if files=$(git diff --name-only "$BASE" HEAD 2>/dev/null) && [ -n "$files" ]; then
               echo "$files"
-              if ! echo "$files" | grep -v -E '^(docs/.*|.*\.md|llms(-full)?\.txt|LICENSE)$' | grep -q .; then
+              if ! echo "$files" | grep -v -E '^(docs/.*|site/.*|scripts/build-site\.js|tests/site\.test\.js|\.github/workflows/pages\.yml|.*\.md|llms(-full)?\.txt|LICENSE)$' | grep -q .; then
                 code=false
               fi
             fi

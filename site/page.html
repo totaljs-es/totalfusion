@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en" data-root="{{root}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}} · TotalFusion</title>
+<meta name="description" content="{{description}}">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#f5f5ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101816" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="{{canonical}}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TotalFusion">
+<meta property="og:title" content="{{title}} · TotalFusion">
+<meta property="og:description" content="{{description}}">
+<meta property="og:url" content="{{canonical}}">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="{{root}}brand/favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="icon" href="{{root}}brand/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="{{root}}brand/apple-touch-icon.png" sizes="180x180">
+<link rel="alternate" type="text/plain" href="{{root}}llms.txt" title="llms.txt">
+<link rel="stylesheet" href="{{root}}styles.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="topbar">
+	<div class="wrap top-inner">
+		<a class="brand" href="{{root}}index.html"><span class="brand-symbol"><img src="{{root}}brand/totaljs.svg" alt="" width="30" height="30"></span><span class="brand-name">TotalFusion<strong>FOR TOTAL.JS AND NODE.JS</strong></span></a>
+		<div class="search" role="search">
+			<input id="search" type="search" placeholder="Search the documentation" aria-label="Search the documentation" autocomplete="off" spellcheck="false">
+			<ul id="results" hidden></ul>
+		</div>
+		<nav class="top-links" aria-label="Main">
+			<a href="{{root}}docs/getting-started.html">Get started</a>
+			<a href="{{root}}docs/tutorials/index.html">Tutorials</a>
+			<a href="https://www.npmjs.com/package/totalfusion" rel="noopener">npm</a>
+			<a class="repo-link" href="https://github.com/totaljs-es/totalfusion" rel="noopener">GitHub <span aria-hidden="true">↗</span></a>
+		</nav>
+		<button class="menu-toggle" type="button" aria-expanded="false" aria-controls="sidebar">Menu</button>
+	</div>
+</header>
+<div class="wrap docs">
+	<nav class="sidebar" id="sidebar" aria-label="Documentation">{{menu}}</nav>
+	<main id="content" class="content">
+		<article>
+{{body}}
+		</article>
+		<div class="pager">{{neighbours}}</div>
+		<p class="edit"><a href="{{edit}}" rel="noopener">Edit this page on GitHub</a></p>
+	</main>
+	<aside class="aside">{{aside}}</aside>
+</div>
+<footer class="footer">
+	<div class="wrap">
+		<p><strong>TotalFusion {{version}}</strong> · MIT license · Made with Total.js by <a href="https://www.totaljs.es/" rel="noopener">Spanish Total.js</a></p>
+		<p><a href="https://github.com/totaljs-es/totalfusion" rel="noopener">GitHub</a> · <a href="https://www.npmjs.com/package/totalfusion" rel="noopener">npm</a> · <a href="{{root}}llms.txt">llms.txt</a> · <a href="https://github.com/totaljs-es/totalfusion/issues" rel="noopener">Issues</a></p>
+	</div>
+</footer>
+<script src="{{root}}site.js"></script>
+</body>
+</html>

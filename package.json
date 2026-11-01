@@ -71,7 +71,8 @@
 		"test:rust": "cargo test --manifest-path rust/Cargo.toml",
 		"test:go": "cd go && go test ./...",
 		"prepublishOnly": "npm run check",
-		"check": "node --test tests/docs.test.js tests/agents.test.js tests/package.test.js",
+		"check": "node --test tests/docs.test.js tests/agents.test.js tests/package.test.js tests/site.test.js",
+		"site": "node scripts/build-site.js",
 		"generate": "node scripts/llms.js --write && node scripts/flow-db.js --write"
 	}
 }

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en" data-root="./">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TotalFusion · Python, Rust, Go and WebAssembly for Total.js</title>
+<meta name="description" content="Call functions written in Python, Rust, Go and WebAssembly from Total.js and Node.js as plain async functions. Use them as actions, API endpoints and MCP tools for AI agents.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#f5f5ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101816" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://totaljs-es.github.io/totalfusion/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TotalFusion">
+<meta property="og:title" content="TotalFusion · Python, Rust, Go and WebAssembly for Total.js">
+<meta property="og:description" content="Call functions written in Python, Rust, Go and WebAssembly from Total.js and Node.js as plain async functions.">
+<meta property="og:url" content="https://totaljs-es.github.io/totalfusion/">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="brand/favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="icon" href="brand/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="brand/apple-touch-icon.png" sizes="180x180">
+<link rel="alternate" type="text/plain" href="llms.txt" title="llms.txt">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="topbar">
+	<div class="wrap top-inner">
+		<a class="brand" href="index.html"><span class="brand-symbol"><img src="brand/totaljs.svg" alt="" width="30" height="30"></span><span class="brand-name">TotalFusion<strong>FOR TOTAL.JS AND NODE.JS</strong></span></a>
+		<nav class="top-links" aria-label="Main">
+			<a href="docs/getting-started.html">Get started</a>
+			<a href="docs/index.html">Documentation</a>
+			<a href="docs/tutorials/index.html">Tutorials</a>
+			<a href="https://www.npmjs.com/package/totalfusion" rel="noopener">npm</a>
+			<a class="repo-link" href="https://github.com/totaljs-es/totalfusion" rel="noopener">GitHub <span aria-hidden="true">↗</span></a>
+		</nav>
+	</div>
+</header>
+
+<main id="content" class="wrap">
+
+<section class="hero" aria-labelledby="title">
+	<div>
+		<p class="eyebrow"><span class="status-dot"></span> Version {{version}} · MIT license</p>
+		<h1 id="title">Extend Total.js with <em>Python, Rust, Go</em> and WebAssembly.</h1>
+		<p class="lead">Call functions written in other languages from Total.js and Node.js as plain <code>async</code> functions. Turn them into actions, API endpoints and MCP tools for AI agents, without leaving JavaScript.</p>
+		<div class="install" data-copy="npm install totalfusion"><span class="prompt">$</span>npm install totalfusion</div>
+		<div class="actions">
+			<a class="button dark" href="docs/getting-started.html">Get started <span aria-hidden="true">→</span></a>
+			<a class="button light" href="docs/index.html">Read the documentation</a>
+		</div>
+		<p class="links"><a href="https://www.npmjs.com/package/totalfusion" rel="noopener">npm</a> · <a href="https://github.com/totaljs-es/totalfusion" rel="noopener">GitHub</a> · <a href="https://github.com/totaljs-es/totalfusion/actions/workflows/test.yml" rel="noopener">Tested on Linux, macOS and Windows</a></p>
+	</div>
+	<div>
+		<div class="code"><pre><code><span class="t-c"># python/sentiment.py</span>
+<span class="t-k">from</span> totalfusion <span class="t-k">import</span> action
+
+@action(summary=<span class="t-s">'Detects the sentiment of a text'</span>,
+        input=<span class="t-s">'*text:String'</span>, output=<span class="t-s">'label:String'</span>, mcp=<span class="t-k">True</span>)
+<span class="t-k">def</span> analyze(data):
+    <span class="t-k">return</span> { <span class="t-s">'label'</span>: <span class="t-s">'POSITIVE'</span> <span class="t-k">if</span> <span class="t-s">'love'</span> <span class="t-k">in</span> data[<span class="t-s">'text'</span>] <span class="t-k">else</span> <span class="t-s">'NEGATIVE'</span> }</code></pre></div>
+		<div class="code"><pre><code><span class="t-c">// Total.js application</span>
+<span class="t-k">const</span> fusion = REQUIRE(<span class="t-s">'totalfusion'</span>);
+
+fusion.register({ python: { path: PATH.root(<span class="t-s">'python'</span>) } });
+
+<span class="t-c">// An action, an API route and an MCP tool</span>
+<span class="t-k">const</span> result = <span class="t-k">await</span> ACTION(<span class="t-s">'sentiment/analyze'</span>, { text: <span class="t-s">'I love it'</span> }).promise();</code></pre></div>
+	</div>
+</section>
+
+<section class="section" aria-labelledby="runtimes">
+	<div class="section-head">
+		<h2 id="runtimes">Four runtimes, one way to call them</h2>
+		<p>Pick the language that fits the work. The call from JavaScript is always the same.</p>
+	</div>
+	<div class="cards">
+		<a class="card" href="docs/python.html"><img src="assets/python.svg" alt="Python" height="44"><h3>Python</h3><p>Machine learning, scientific computing, any Python library. Python 3.9 or newer.</p><span class="more">Python docs →</span></a>
+		<a class="card" href="docs/rust.html"><img src="assets/rust.svg" alt="Rust" height="44"><h3>Rust</h3><p>Speed, many threads and a small footprint. You build a binary; running it does not need Rust.</p><span class="more">Rust docs →</span></a>
+		<a class="card" href="docs/go.html"><img src="assets/go.svg" alt="Go" height="44"><h3>Go</h3><p>Network and infrastructure code, many calls at once, one binary for any system.</p><span class="more">Go docs →</span></a>
+		<a class="card" href="docs/webassembly.html"><img src="assets/webassembly.svg" alt="WebAssembly" height="44"><h3>WebAssembly</h3><p>Code in a sandbox: no files, no network, no environment, in one file for every system.</p><span class="more">WebAssembly docs →</span></a>
+	</div>
+</section>
+
+<section class="section" aria-labelledby="start">
+	<div class="section-head">
+		<h2 id="start">From zero to a first call in a minute</h2>
+		<p>Node.js 20 or newer, and Python 3.9 or newer for the Python runtime. <strong>TotalFusion never installs, downloads or compiles anything for you.</strong></p>
+	</div>
+	<div class="steps">
+		<div class="step">
+			<h3>Install it</h3>
+			<div class="code"><pre><code>npm install totalfusion
+npx totalfusion doctor --path ./python</code></pre></div>
+			<p>The <code>doctor</code> tells you what is missing, and the exact command to fix it, before anything runs.</p>
+		</div>
+		<div class="step">
+			<h3>Write the function</h3>
+			<div class="code"><pre><code><span class="t-c"># python/hello.py</span>
+<span class="t-k">def</span> greet(data):
+    <span class="t-k">return</span> {<span class="t-s">'message'</span>: <span class="t-s">'Hello '</span> + data[<span class="t-s">'name'</span>]}</code></pre></div>
+			<p>A plain function in a plain file. No server, no protocol.</p>
+		</div>
+		<div class="step">
+			<h3>Call it from Node.js</h3>
+			<div class="code"><pre><code><span class="t-k">const</span> fusion = <span class="t-k">require</span>(<span class="t-s">'totalfusion'</span>);
+
+fusion.configure({
+    python: { path: <span class="t-s">'./python'</span> }
+});
+
+<span class="t-k">const</span> result = <span class="t-k">await</span> fusion.python(
+    <span class="t-s">'hello.greet'</span>, { name: <span class="t-s">'world'</span> });
+<span class="t-c">// { message: 'Hello world' }</span></code></pre></div>
+			<p>A pool of workers starts on the first call and stays alive.</p>
+		</div>
+	</div>
+	<p class="note top">Keep going in <a href="docs/getting-started.html">Getting started</a>: it covers Total.js 5 actions, Rust, Go and the <code>doctor</code>.</p>
+</section>
+
+<section class="section" aria-labelledby="numbers">
+	<div class="section-head">
+		<h2 id="numbers">Why not just <code>child_process</code>?</h2>
+		<p>A process per call costs time and gives you nothing to build on. A worker that is already running answers at once, and keeps your model in memory.</p>
+	</div>
+	<div class="numbers">
+		<div class="number"><strong>17.6 ms</strong><span>to start a process for every call</span></div>
+		<div class="number"><strong>0.07 ms</strong><span>for a small call to a Python worker that is running</span></div>
+		<div class="number"><strong>0.03 ms</strong><span>for a small call to a Rust or Go worker</span></div>
+		<div class="number"><strong>43 ms</strong><span>for a 100 MB buffer to make the round trip, without base64</span></div>
+	</div>
+	<p class="note top">Beyond speed you get what you would otherwise write yourself: a pool, a bounded queue, timeouts, cancellation, restart of workers that die, memory limits, streaming and the contracts that make a function an action. <a href="docs/use-cases.html">Use cases</a> has the numbers, and <a href="docs/use-cases.html#where-it-does-not-fit">where it does not fit</a> says when not to use it.</p>
+</section>
+
+<section class="section" aria-labelledby="features">
+	<div class="section-head">
+		<h2 id="features">What you get</h2>
+	</div>
+	<div class="cards three">
+		<a class="card" href="docs/workers.html"><h3>Workers that stay healthy</h3><p>A pool of long-lived processes that Node.js supervises: timeouts, cancellation, real errors, replaced after a number of calls or when they use too much memory. A crash never takes your application down.</p></a>
+		<a class="card" href="docs/total5.html"><h3>Total.js integration</h3><p>Functions that declare a contract become actions with validated input, permissions, API routes, MCP tools and Server-Sent Events.</p></a>
+		<a class="card" href="docs/webassembly.html"><h3>A sandbox</h3><p>A WebAssembly module runs without files, network or environment. Load the code of third parties and cut off one that never returns.</p></a>
+		<a class="card" href="docs/flow.html"><h3>Seven components for Flow</h3><p>Call a function of any runtime from a node, stream chunks as messages, send the events of the workers to an alert and read the stats.</p></a>
+		<a class="card" href="docs/streaming.html"><h3>Streaming</h3><p>A generator in Python or a stream function in Rust or Go is an async iterable, with backpressure and cancellation.</p></a>
+		<a class="card" href="docs/binary-data.html"><h3>Binary data without base64</h3><p><code>Buffer</code> and typed arrays travel as raw bytes in both directions, NumPy arrays included.</p></a>
+		<a class="card" href="docs/development.html"><h3>Development reload</h3><p>Save a file and the next call runs the new code. A <code>doctor</code> checks your setup before anything runs.</p></a>
+		<a class="card" href="docs/ai.html"><h3>Made for AI assistants</h3><p>Your functions as MCP tools, JSON schemas, and files for models and agents: <a href="llms.txt">llms.txt</a> and AGENTS.md.</p></a>
+		<a class="card" href="docs/security.html"><h3>Honest about security</h3><p>The documentation says what it protects and what it does not.</p></a>
+	</div>
+</section>
+
+<section class="section" aria-labelledby="learn">
+	<div class="section-head">
+		<h2 id="learn">Learn by building</h2>
+		<p>Every tutorial has an application that you can run and a test that runs it on every change, so the commands and the answers on the page are the ones that work.</p>
+	</div>
+	<div class="cards two">
+		<a class="card" href="docs/tutorials/01-python-action-and-mcp.html"><h3>A Python function as an API and as a tool for an AI agent</h3><p>Write a function with a contract, serve it from Total.js with validation, offer it to an agent over MCP and edit it while it runs.</p><span class="more">Tutorial 1 →</span></a>
+		<a class="card" href="docs/tutorials/02-wasm-sandbox.html"><h3>Run the code of third parties in the sandbox of WebAssembly</h3><p>Load modules of customers, watch a hostile one fail to read files, and cut off one that never returns.</p><span class="more">Tutorial 2 →</span></a>
+	</div>
+</section>
+
+</main>
+
+<footer class="footer">
+	<div class="wrap">
+		<p><strong>TotalFusion {{version}}</strong> · MIT license · Made with Total.js by <a href="https://www.totaljs.es/" rel="noopener">Spanish Total.js</a></p>
+		<p><a href="https://github.com/totaljs-es/totalfusion" rel="noopener">GitHub</a> · <a href="https://www.npmjs.com/package/totalfusion" rel="noopener">npm</a> · <a href="llms.txt">llms.txt</a> · <a href="https://github.com/totaljs-es/totalfusion/issues" rel="noopener">Issues</a></p>
+	</div>
+</footer>
+<script src="site.js"></script>
+</body>
+</html>
