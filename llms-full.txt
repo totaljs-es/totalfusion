@@ -19,6 +19,8 @@ Node.js 20 or newer, no dependencies, plain JavaScript (no TypeScript). Version 
 
 <p align="center"><sub>Python, Rust, Go and WebAssembly &middot; for Total.js and Node.js</sub></p>
 
+<p align="center"><a href="https://totaljs-es.github.io/totalfusion/"><b>totaljs-es.github.io/totalfusion</b></a> &middot; the website, with the documentation, tutorials and search</p>
+
 <p align="center"><a href="https://www.npmjs.com/package/totalfusion"><img src="https://img.shields.io/npm/v/totalfusion" alt="npm version"></a> <a href="https://github.com/totaljs-es/totalfusion/actions/workflows/test.yml"><img src="https://github.com/totaljs-es/totalfusion/actions/workflows/test.yml/badge.svg" alt="Tests on Linux, macOS and Windows"></a></p>
 
 **Extends Total.js with other runtimes.** Call functions written in Python, Rust, Go and WebAssembly from Total.js and Node.js as plain `async` functions, and use them as Actions, API endpoints and MCP tools for AI agents, without leaving JavaScript. WebAssembly modules run in a sandbox.
