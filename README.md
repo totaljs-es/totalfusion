@@ -1,6 +1,10 @@
-<p align="center"><img src="docs/assets/logo.svg" alt="TotalFusion" width="96" height="96"></p>
+<div align="center">
+
+<img src="docs/assets/logo.svg" alt="TotalFusion logo" width="96" height="96">
 
 # TotalFusion
+
+</div>
 
 <p align="center">
   <a href="docs/python.md"><img src="docs/assets/python.svg" alt="Python" height="56"></a>&nbsp;&nbsp;&nbsp;&nbsp;
